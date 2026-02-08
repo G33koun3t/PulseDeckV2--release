@@ -112,7 +112,8 @@
 - Webviews personnalisées (jusqu'à 5)
 - Sélecteur de langue (9 langues)
 - Démarrage automatique Windows (toggle)
-- Licence LemonSqueezy
+- Licence Gumroad
+- Section mises à jour automatiques (electron-updater)
 
 ### 16. Lanceur (StreamDeck) ✅
 - Grille personnalisable (7x5 par défaut)
@@ -137,6 +138,44 @@
 ### 20. Police globale ✅
 - Font-size body: 18px (augmenté de 16px)
 - Toutes les tailles explicites augmentées de +2px
+
+### 21. Système de licence (Gumroad) ✅
+- Activation/validation via API Gumroad (`POST /v2/licenses/verify`)
+- Machine fingerprint via `node-machine-id` + SHA256
+- Grace period offline de 7 jours
+- Fichier licence : `%APPDATA%/monitoring-dashboard/license.json`
+- Version gratuite (modules limités : monitoring, volume, news, settings)
+- URL store : `https://4620487871362.gumroad.com/l/PulseDeck`
+
+### 22. Mises à jour automatiques (electron-updater) ✅
+- `electron-updater` + GitHub Releases sur repo public `G33koun3t/PulseDeck--release`
+- Vérification automatique au démarrage (délai 5s)
+- Téléchargement en arrière-plan + barre de progression
+- Bouton "Redémarrer et installer" quand la MAJ est prête
+- Vérification manuelle depuis Settings
+- Module dédié : `src/main/updater.js`
+- Publication : `set GH_TOKEN=xxx && npm run dist -- --publish always`
+
+### 23. Site web (GitHub Pages) ✅
+- Landing page : `website/index.html` (hébergée sur `g33koun3t.github.io/Monitoring-Dashboard/`)
+- Privacy Policy : `website/privacy-policy.html`
+- Terms of Use : `website/terms-of-use.html`
+- Google site verification intégrée
+
+### 24. Procédure de publication d'une mise à jour
+1. Incrémenter la version dans `package.json` (ex: `"version": "1.0.0"` → `"version": "1.1.0"`)
+2. Créer un **Personal Access Token GitHub** (une seule fois) :
+   - github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Scope : `repo` (accès complet)
+   - Copier le token `ghp_...`
+3. Build + publish :
+   ```bash
+   set GH_TOKEN=ghp_ton_token && npm run dist -- --publish always
+   ```
+4. electron-builder crée automatiquement une GitHub Release sur `G33koun3t/PulseDeck--release` avec :
+   - `PulseDeck Setup x.x.x.exe` (installer)
+   - `latest.yml` (métadonnées pour electron-updater)
+5. Les utilisateurs existants reçoivent la notification au prochain démarrage (Settings → Mises à jour)
 
 ---
 
@@ -197,6 +236,7 @@
 - Fichier créé le 04/02/2026
 - Mise à jour le 04/02/2026 : Modules Volume, Home Assistant (volets) et Minuteur complétés
 - Mise à jour le 07/02/2026 : Module Outils (Pomodoro, Notes, Screenshots), Visualiseur audio, Icône app, i18n complet, Police +2px
+- Mise à jour le 08/02/2026 : Migration licence Gumroad, mises à jour automatiques (electron-updater), site web (GitHub Pages), privacy policy, terms of use
 
 ## Légende
 - ✅ Complété

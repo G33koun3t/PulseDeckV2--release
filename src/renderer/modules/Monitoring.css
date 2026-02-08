@@ -54,9 +54,8 @@
 .gaming-toggle-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 6px;
+  padding: 4px 10px;
   background: transparent;
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -65,6 +64,7 @@
   margin-left: 8px;
   flex-shrink: 0;
   transition: all 0.15s ease;
+  font-size: 13px;
 }
 
 .gaming-toggle-btn:hover {
@@ -77,6 +77,29 @@
   background: rgba(139, 92, 246, 0.15);
   border-color: rgba(139, 92, 246, 0.4);
   color: #a78bfa;
+}
+
+.gaming-toggle-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.gaming-toggle-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.gaming-toggle-badge.on {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.15);
+}
+
+.gaming-toggle-badge.off {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ===== MODE GAMING : désactiver toutes les animations ===== */
@@ -759,4 +782,11 @@
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.speedtest-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ea4335;
 }

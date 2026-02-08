@@ -166,7 +166,7 @@ function CalendarModule() {
         setGoogleConnected(true);
         fetchAllCalendars();
       } else {
-        setGoogleError(result.error || 'Échec de la connexion');
+        setGoogleError(result.error || t('calendar.connectionFailed'));
       }
     } catch (e) {
       setGoogleError(e.message);
@@ -226,7 +226,7 @@ function CalendarModule() {
 
             eventsByDate[key].push({
               id: event.uid || `cal-${cal.id}-${Date.now()}-${Math.random()}`,
-              title: event.summary || 'Sans titre',
+              title: event.summary || t('calendar.untitled'),
               time: getTimeFromISO(event.start),
               endTime: event.end ? getTimeFromISO(event.end) : null,
               location: event.location,
@@ -248,7 +248,7 @@ function CalendarModule() {
       setLastSync(new Date());
 
       if (hasError) {
-        setGoogleError('Certains calendriers n\'ont pas pu être synchronisés');
+        setGoogleError(t('calendar.syncError'));
       }
     } catch (error) {
       console.error('Erreur synchronisation:', error);
@@ -354,7 +354,7 @@ function CalendarModule() {
   // Combiner événements locaux et tous les calendriers
   const getEventsForDate = (date) => {
     const key = dateToKey(date);
-    const local = (localEvents[key] || []).map(e => ({ ...e, calendarColor: 'var(--accent-secondary)' }));
+    const local = googleConnected ? [] : (localEvents[key] || []).map(e => ({ ...e, calendarColor: 'var(--accent-secondary)' }));
 
     const calEvts = [];
     Object.values(calendarEvents).forEach(calData => {
@@ -413,7 +413,7 @@ function CalendarModule() {
         <div className="calendar-settings">
           <div className="settings-header">
             <Settings size={20} />
-            <span>Configuration Calendrier</span>
+            <span>{t('calendar.configTitle')}</span>
             <button className="close-btn" onClick={() => setShowSettings(false)}>
               <X size={18} />
             </button>
@@ -421,13 +421,13 @@ function CalendarModule() {
           <div className="settings-form">
             {/* Google Auth Section */}
             <div className="form-group google-auth-section">
-              <label>Compte Google (création d'événements)</label>
+              <label>{t('calendar.googleAccount')}</label>
               {googleConnected ? (
                 <div className="google-auth-status connected">
                   <CheckCircle size={18} />
-                  <span>Connecté à Google Calendar</span>
+                  <span>{t('calendar.connectedToGoogle')}</span>
                   <button className="logout-btn" onClick={handleGoogleLogout}>
-                    <LogOut size={14} /> Déconnecter
+                    <LogOut size={14} /> {t('calendar.disconnect')}
                   </button>
                 </div>
               ) : (
@@ -438,19 +438,20 @@ function CalendarModule() {
                     disabled={isAuthLoading}
                   >
                     {isAuthLoading ? (
-                      <><Loader size={16} className="spinning" /> Connexion en cours...</>
+                      <><Loader size={16} className="spinning" /> {t('calendar.connecting')}</>
                     ) : (
-                      <><LogIn size={16} /> Connecter Google Calendar</>
+                      <><LogIn size={16} /> {t('calendar.connectGoogle')}</>
                     )}
                   </button>
-                  <small>Permet de créer des événements directement sur Google Calendar</small>
+                  <small>{t('calendar.googleNote')}</small>
                 </div>
               )}
+              <p className="google-auth-desc">{t('calendar.googleDesc')}</p>
             </div>
 
             {/* Liste des calendriers */}
             <div className="form-group">
-              <label>Calendriers ICS ({tempCalendars.length})</label>
+              <label>{t('calendar.icsCalendars')} ({tempCalendars.length})</label>
               <div className="calendars-list">
                 {tempCalendars.map(cal => (
                   <div key={cal.id} className="calendar-item">
@@ -485,19 +486,19 @@ function CalendarModule() {
 
             {/* Ajouter un calendrier */}
             <div className="form-group add-calendar-section">
-              <label>Ajouter un calendrier</label>
+              <label>{t('calendar.addCalendar')}</label>
               <div className="add-cal-form">
                 <input
                   type="text"
                   value={newCalName}
                   onChange={(e) => setNewCalName(e.target.value)}
-                  placeholder="Nom (ex: Travail, Sport...)"
+                  placeholder={t('calendar.calendarNamePlaceholder')}
                   className="add-cal-input"
                 />
                 <textarea
                   value={newCalUrl}
                   onChange={(e) => setNewCalUrl(e.target.value)}
-                  placeholder="URL iCal (https://calendar.google.com/calendar/ical/...)"
+                  placeholder={t('calendar.calendarUrlPlaceholder')}
                   rows={2}
                 />
                 <div className="add-cal-bottom">
@@ -516,12 +517,12 @@ function CalendarModule() {
                     onClick={addCalendar}
                     disabled={!newCalName.trim() || !newCalUrl.trim()}
                   >
-                    <Plus size={14} /> Ajouter
+                    <Plus size={14} /> {t('common.add')}
                   </button>
                 </div>
               </div>
               <small>
-                Google Calendar → Paramètres du calendrier → Adresse secrète au format iCal
+                {t('calendar.icsHelp')}
               </small>
             </div>
 
@@ -536,7 +537,7 @@ function CalendarModule() {
               </div>
             )}
             <button className="save-btn" onClick={saveSettings}>
-              Enregistrer
+              {t('common.save')}
             </button>
           </div>
         </div>
@@ -562,21 +563,21 @@ function CalendarModule() {
           </div>
           <div className="calendar-actions">
             {googleConnected && (
-              <span className="google-badge" title="Connecté à Google Calendar">
+              <span className="google-badge" title={t('calendar.connectedToGoogle')}>
                 <CheckCircle size={14} />
               </span>
             )}
             <button
               className={`sync-btn ${isLoadingGoogle ? 'loading' : ''}`}
               onClick={fetchAllCalendars}
-              title="Synchroniser les calendriers"
+              title={t('calendar.syncCalendars')}
             >
               <RefreshCw size={16} className={isLoadingGoogle ? 'spinning' : ''} />
             </button>
             <button className="settings-btn" onClick={() => {
               setTempCalendars(calendars);
               setShowSettings(true);
-            }} title="Paramètres">
+            }} title={t('common.settings')}>
               <Settings size={16} />
             </button>
             <button className="today-btn" onClick={goToToday}>
@@ -607,50 +608,16 @@ function CalendarModule() {
               >
                 <span className="day-number">{dayInfo.day}</span>
                 {dayEvents.length > 0 && (
-                  <div className="event-bars">
-                    {(() => {
-                      const sorted = dayEvents
-                        .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'))
-                        .slice(0, 8);
-                      const minBarWidth = 4;
-                      const bars = sorted.map(evt => {
-                        const [h, m] = (evt.time || '00:00').split(':').map(Number);
-                        const startMin = h * 60 + m;
-                        const startPct = (startMin / 1440) * 100;
-                        // Calculate duration in minutes
-                        let durationMin = 60; // default 1h
-                        if (evt.endTime && evt.time) {
-                          const [eh, em] = evt.endTime.split(':').map(Number);
-                          durationMin = (eh * 60 + em) - startMin;
-                          if (durationMin <= 0) durationMin = 60;
-                        }
-                        // Width: proportional to duration, min 4px for < 1h
-                        const durationPct = (durationMin / 1440) * 100;
-                        return { ...evt, startPct, durationPct, durationMin };
-                      });
-                      return bars.map((bar, i) => {
-                        // < 1h: thin bar (fixed px), >= 1h: percentage width
-                        const usePercentWidth = bar.durationMin >= 60;
-                        const style = {
-                          left: `${bar.startPct}%`,
-                          background: isToday ? 'rgba(255,255,255,0.85)' : (bar.calendarColor || 'var(--accent-secondary)')
-                        };
-                        if (usePercentWidth) {
-                          style.width = `${bar.durationPct}%`;
-                        } else {
-                          style.width = `${minBarWidth}px`;
-                        }
-                        return (
-                          <span
-                            key={i}
-                            className="event-bar-v"
-                            style={style}
-                          />
-                        );
-                      });
-                    })()}
-                    {dayEvents.length > 8 && (
-                      <span className="event-count-v">+{dayEvents.length - 8}</span>
+                  <div className="event-dots">
+                    {dayEvents.slice(0, 5).map((evt, i) => (
+                      <span
+                        key={i}
+                        className="event-dot"
+                        style={{ background: isToday ? 'rgba(255,255,255,0.85)' : (evt.calendarColor || 'var(--accent-secondary)') }}
+                      />
+                    ))}
+                    {dayEvents.length > 5 && (
+                      <span className="event-dots-more">+{dayEvents.length - 5}</span>
                     )}
                   </div>
                 )}
@@ -724,9 +691,11 @@ function CalendarModule() {
               <span className="legend-dot" style={{ background: cal.color }} /> {cal.name}
             </span>
           ))}
-          <span className="legend-item">
-            <span className="legend-dot" style={{ background: 'var(--accent-secondary)' }} /> Local
-          </span>
+          {!googleConnected && (
+            <span className="legend-item">
+              <span className="legend-dot" style={{ background: 'var(--accent-secondary)' }} /> {t('calendar.local')}
+            </span>
+          )}
         </div>
       </div>
 
@@ -735,7 +704,7 @@ function CalendarModule() {
         <div className="event-modal-overlay" onClick={() => setShowEventModal(false)}>
           <div className="event-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Nouvel événement</h3>
+              <h3>{t('calendar.newEvent')}</h3>
               {googleConnected && (
                 <span className="modal-google-badge">
                   <CheckCircle size={14} /> Google
@@ -747,19 +716,19 @@ function CalendarModule() {
             </div>
             <div className="modal-content">
               <div className="form-group">
-                <label>Titre</label>
+                <label>{t('calendar.title')}</label>
                 <input
                   type="text"
                   value={newEventTitle}
                   onChange={(e) => setNewEventTitle(e.target.value)}
-                  placeholder="Nom de l'événement"
+                  placeholder={t('calendar.eventNamePlaceholder')}
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && addEvent()}
                 />
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Début</label>
+                  <label>{t('calendar.start')}</label>
                   <input
                     type="time"
                     value={newEventTime}
@@ -772,7 +741,7 @@ function CalendarModule() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Fin</label>
+                  <label>{t('calendar.end')}</label>
                   <input
                     type="time"
                     value={newEventEndTime}
@@ -781,7 +750,7 @@ function CalendarModule() {
                 </div>
               </div>
               <div className="form-group">
-                <label>Date</label>
+                <label>{t('calendar.date')}</label>
                 <div className="selected-date-display">
                   {selectedDate.toLocaleDateString(dateLocale, {
                     weekday: 'long',
@@ -794,7 +763,7 @@ function CalendarModule() {
             </div>
             <div className="modal-actions">
               <button className="cancel-btn" onClick={() => setShowEventModal(false)}>
-                Annuler
+                {t('common.cancel')}
               </button>
               <button
                 className={`save-btn ${googleConnected ? 'google' : ''}`}
@@ -802,11 +771,11 @@ function CalendarModule() {
                 disabled={isCreatingEvent || !newEventTitle.trim()}
               >
                 {isCreatingEvent ? (
-                  <><Loader size={16} className="spinning" /> Création...</>
+                  <><Loader size={16} className="spinning" /> {t('calendar.creating')}</>
                 ) : googleConnected ? (
-                  <>Ajouter sur Google</>
+                  <>{t('calendar.addToGoogle')}</>
                 ) : (
-                  <>Ajouter (local)</>
+                  <>{t('calendar.addLocal')}</>
                 )}
               </button>
             </div>

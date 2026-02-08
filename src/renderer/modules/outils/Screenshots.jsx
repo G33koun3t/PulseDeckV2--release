@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Camera, FolderOpen, Trash2, X, RefreshCw, Image } from 'lucide-react';
+import { Camera, FolderOpen, Trash2, X, RefreshCw, Image, Monitor } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import './Screenshots.css';
 
@@ -11,6 +11,8 @@ function Screenshots() {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [screens, setScreens] = useState([]);
+  const [selectedScreen, setSelectedScreen] = useState(() => localStorage.getItem('outils_screenshots_screen') || '');
 
   const loadScreenshots = useCallback(async () => {
     if (!folder || !window.electronAPI?.listScreenshots) return;
@@ -30,6 +32,23 @@ function Screenshots() {
     if (folder) loadScreenshots();
   }, [folder, loadScreenshots]);
 
+  // Charger la liste des écrans
+  const loadScreens = useCallback(async () => {
+    if (!window.electronAPI?.getScreens) return;
+    const result = await window.electronAPI.getScreens();
+    if (result.success) {
+      setScreens(result.screens);
+      // Si aucun écran sélectionné ou l'écran sauvegardé n'existe plus, prendre le premier
+      if (!result.screens.find(s => s.id === selectedScreen) && result.screens.length > 0) {
+        setSelectedScreen(result.screens[0].id);
+      }
+    }
+  }, [selectedScreen]);
+
+  useEffect(() => {
+    loadScreens();
+  }, []);
+
   const handleSelectFolder = async () => {
     const selected = await window.electronAPI?.selectScreenshotFolder();
     if (selected) {
@@ -41,11 +60,16 @@ function Screenshots() {
   const handleCapture = async () => {
     if (!folder) return;
     setLoading(true);
-    const result = await window.electronAPI?.takeScreenshot(folder);
+    const result = await window.electronAPI?.takeScreenshot(folder, selectedScreen || undefined);
     setLoading(false);
     if (result?.success) {
       loadScreenshots();
     }
+  };
+
+  const handleSelectScreen = (screenId) => {
+    setSelectedScreen(screenId);
+    localStorage.setItem('outils_screenshots_screen', screenId);
   };
 
   const handleDelete = async (filePath) => {
@@ -92,6 +116,29 @@ function Screenshots() {
           <Camera size={28} />
           <span>{loading ? '...' : t('outils.takeScreenshot')}</span>
         </button>
+
+        {screens.length > 1 && (
+          <div className="screenshot-screen-selector">
+            <span className="screenshot-screen-label">{t('outils.selectScreen')}</span>
+            <div className="screenshot-screen-list">
+              {screens.map((scr, i) => (
+                <button
+                  key={scr.id}
+                  className={`screenshot-screen-btn ${selectedScreen === scr.id ? 'active' : ''}`}
+                  onClick={() => handleSelectScreen(scr.id)}
+                  title={`${scr.name} (${scr.width}×${scr.height})`}
+                >
+                  <img src={scr.thumbnail} alt={scr.name} className="screenshot-screen-thumb" />
+                  <span className="screenshot-screen-info">
+                    <Monitor size={12} />
+                    {i + 1}
+                    <span className="screenshot-screen-res">{scr.width}×{scr.height}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="screenshot-folder-info">
           <span className="screenshot-folder-label">{t('outils.screenshotFolder')}</span>
@@ -169,7 +216,7 @@ function Screenshots() {
           </button>
           <img
             className="screenshot-preview-img"
-            src={`file://${preview}`}
+            src={`local-file:///${preview.replace(/\\/g, '/')}`}
             alt="Preview"
             onClick={e => e.stopPropagation()}
           />

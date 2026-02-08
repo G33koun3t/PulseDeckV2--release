@@ -8,12 +8,14 @@ import {
   Wrench,
   Newspaper,
   ClipboardList,
+  Video,
   Settings,
   Minus,
   X,
 } from 'lucide-react';
 import { getWebviewIcon } from '../utils/webviewIcons';
 import { useTranslation } from '../i18n';
+import { useLicense } from '../contexts/LicenseContext';
 
 // Modules natifs — labelKey résolu au rendu via t()
 const menuItems = [
@@ -25,11 +27,18 @@ const menuItems = [
   { id: 'timer', icon: Wrench, labelKey: 'sidebar.timer' },
   { id: 'news', icon: Newspaper, labelKey: 'sidebar.news' },
   { id: 'clipboard', icon: ClipboardList, labelKey: 'sidebar.clipboard' },
-  { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
+  { id: 'obs', icon: Video, labelKey: 'sidebar.obs' },
 ];
+
+// Settings toujours en dernière position
+const settingsItem = { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' };
+
+// Modules autorisés en version gratuite
+const FREE_MODE_MODULES = ['monitoring', 'volume', 'news'];
 
 function Sidebar({ activeModule, onModuleChange, sidebarOrder, hiddenModules = [], customWebviews = [] }) {
   const { t } = useTranslation();
+  const { isFreeMode } = useLicense();
 
   const handleMinimize = () => {
     window.electronAPI?.minimizeWindow();
@@ -52,17 +61,26 @@ function Sidebar({ activeModule, onModuleChange, sidebarOrder, hiddenModules = [
     label: t(item.labelKey),
   }));
 
+  // En free mode : seulement monitoring + 1 webview custom max
+  const filteredNative = isFreeMode
+    ? nativeItems.filter(item => FREE_MODE_MODULES.includes(item.id))
+    : nativeItems;
+  const filteredCustom = isFreeMode ? customItems.slice(0, 1) : customItems;
+
   // Combiner modules natifs + webviews custom
-  const allItems = [...nativeItems, ...customItems];
+  const allItems = [...filteredNative, ...filteredCustom];
 
   // Trier selon l'ordre personnalisé (si défini) et filtrer les modules masqués
+  // Settings est exclu de l'ordre personnalisé — toujours en dernière position
   const orderedItems = (sidebarOrder
     ? [
-        ...sidebarOrder.map(id => allItems.find(item => item.id === id)).filter(Boolean),
-        ...allItems.filter(item => !sidebarOrder.includes(item.id))
+        ...sidebarOrder.filter(id => id !== 'settings').map(id => allItems.find(item => item.id === id)).filter(Boolean),
+        ...allItems.filter(item => item.id !== 'settings' && !sidebarOrder.includes(item.id))
       ]
-    : allItems
+    : allItems.filter(item => item.id !== 'settings')
   ).filter(item => !hiddenModules.includes(item.id));
+
+  const isSettingsActive = activeModule === 'settings';
 
   return (
     <aside className="sidebar">
@@ -85,6 +103,13 @@ function Sidebar({ activeModule, onModuleChange, sidebarOrder, hiddenModules = [
       </div>
 
       <div className="sidebar-controls">
+        <button
+          className={`sidebar-item ${isSettingsActive ? 'active' : ''}`}
+          onClick={() => onModuleChange('settings')}
+          title={t(settingsItem.labelKey)}
+        >
+          <Settings strokeWidth={isSettingsActive ? 2.5 : 1.5} />
+        </button>
         <button className="control-btn minimize" onClick={handleMinimize} title={t('sidebar.minimize')}>
           <Minus />
         </button>

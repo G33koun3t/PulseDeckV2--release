@@ -1,8 +1,8 @@
 {
-  "name": "monitoring",
+  "name": "pulsedeck",
   "version": "1.0.0",
   "main": "src/main/main.js",
-  "description": "Dashboard de monitoring pour Corsair Xeneon Edge",
+  "description": "PulseDeck - Dashboard pour Corsair Xeneon Edge",
   "author": "",
   "license": "ISC",
   "scripts": {
@@ -23,12 +23,14 @@
     "wait-on": "^9.0.3"
   },
   "dependencies": {
+    "electron-updater": "^6.7.3",
     "googleapis": "^171.2.0",
     "imap": "^0.8.19",
     "loudness": "^0.4.2",
     "lucide-react": "^0.563.0",
     "mailparser": "^3.9.3",
     "node-machine-id": "^1.1.12",
+    "obs-websocket-js": "^5.0.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.7.0",
@@ -37,8 +39,8 @@
     "systeminformation": "^5.30.7"
   },
   "build": {
-    "appId": "com.monitoring.dashboard",
-    "productName": "Monitoring Dashboard",
+    "appId": "com.pulsedeck.app",
+    "productName": "PulseDeck",
     "directories": {
       "output": "release"
     },
@@ -54,6 +56,10 @@
         "filter": [
           "*.ps1"
         ]
+      },
+      {
+        "from": "monitoring.ico",
+        "to": "monitoring.ico"
       }
     ],
     "win": {
@@ -66,7 +72,16 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
     },
+    "asarUnpack": [
+      "**/speedtest-net/binaries/**",
+      "**/loudness/**"
+    ],
     "asar": true,
-    "electronDist": "node_modules/electron/dist"
+    "electronDist": "node_modules/electron/dist",
+    "publish": {
+      "provider": "github",
+      "owner": "G33koun3t",
+      "repo": "PulseDeck--release"
+    }
   }
 }

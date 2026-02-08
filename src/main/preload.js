@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Flux RSS
   fetchRss: (feedUrl) => ipcRenderer.invoke('fetch-rss', feedUrl),
 
+  // Crypto prix
+  fetchCryptoPrices: () => ipcRenderer.invoke('fetch-crypto-prices'),
+
   // Presse-papiers
   clipboardRead: () => ipcRenderer.invoke('clipboard-read'),
   clipboardWrite: (text) => ipcRenderer.invoke('clipboard-write', text),
@@ -73,7 +76,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Screenshots (Outils)
   selectScreenshotFolder: () => ipcRenderer.invoke('select-screenshot-folder'),
-  takeScreenshot: (folder) => ipcRenderer.invoke('take-screenshot', folder),
+  getScreens: () => ipcRenderer.invoke('get-screens'),
+  takeScreenshot: (folder, sourceId) => ipcRenderer.invoke('take-screenshot', folder, sourceId),
   listScreenshots: (folder) => ipcRenderer.invoke('list-screenshots', folder),
   getScreenshotThumbnail: (filePath) => ipcRenderer.invoke('get-screenshot-thumbnail', filePath),
   deleteScreenshot: (filePath) => ipcRenderer.invoke('delete-screenshot', filePath),
@@ -86,6 +90,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setGamingAuto: (enabled) => ipcRenderer.invoke('set-gaming-auto', enabled),
   setGamingManual: (active) => ipcRenderer.invoke('set-gaming-manual', active),
   setMonitoringPaused: (paused) => ipcRenderer.invoke('set-monitoring-paused', paused),
+
+  // Guide utilisateur PDF
+  openGuide: (lang) => ipcRenderer.invoke('open-guide', lang),
+
+  // Gestion des écrans
+  getDisplays: () => ipcRenderer.invoke('get-displays'),
+  setTargetDisplay: (displayId) => ipcRenderer.invoke('set-target-display', displayId),
+
+  // Mises à jour automatiques
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('update-status', (event, data) => callback(data));
+  },
 
   // Listeners pour les updates temps réel (legacy)
   onSystemUpdate: (callback) => {

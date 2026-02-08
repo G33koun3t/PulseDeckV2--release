@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings, Plus, X, Save, Image, Trash2, Check, Download, Upload, Power, RotateCcw, Moon, Lock, Trash, Layers, Minus } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { useLicense } from '../contexts/LicenseContext';
 import './StreamDeck.css';
 
 const STORAGE_KEY = 'streamdeck_buttons';
@@ -47,6 +48,7 @@ function getGridSettings() {
 
 function StreamDeck() {
   const { t } = useTranslation();
+  const { isFreeMode } = useLicense();
   const [buttons, setButtons] = useState(loadButtons);
   const [editMode, setEditMode] = useState(false);
   const [editingButton, setEditingButton] = useState(null);
@@ -242,8 +244,11 @@ function StreamDeck() {
     return def ? def.icon : Power;
   };
 
-  // Construire la grille
-  const totalSlots = gridSettings.columns * gridSettings.rows;
+  // Construire la grille (clampée en free mode)
+  const effectiveGrid = isFreeMode
+    ? { columns: Math.min(gridSettings.columns, 4), rows: Math.min(gridSettings.rows, 4) }
+    : gridSettings;
+  const totalSlots = effectiveGrid.columns * effectiveGrid.rows;
   const grid = Array.from({ length: totalSlots }, (_, i) => {
     return buttons.find(b => b.position === i) || null;
   });
@@ -296,7 +301,7 @@ function StreamDeck() {
       </div>
 
       {/* Grille */}
-      <div className="streamdeck-grid" style={{ gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)` }}>
+      <div className="streamdeck-grid" style={{ gridTemplateColumns: `repeat(${effectiveGrid.columns}, 1fr)` }}>
         {grid.map((button, index) => {
           if (button) {
             return (
@@ -346,26 +351,28 @@ function StreamDeck() {
             </div>
 
             <div className="streamdeck-modal-body">
-              {/* Sélecteur de type */}
-              <div className="streamdeck-type-selector">
-                <label>{t('launcher.buttonType')}</label>
-                <div className="streamdeck-type-options">
-                  {['app', 'system', 'profile'].map(type => (
-                    <button
-                      key={type}
-                      className={`streamdeck-type-option ${editingButton.type === type ? 'active' : ''}`}
-                      onClick={() => setEditingButton(prev => ({
-                        ...prev,
-                        type,
-                        action: type === 'system' ? (prev.type === 'system' ? prev.action : '') : prev.action,
-                        actions: type === 'profile' ? (prev.type === 'profile' ? prev.actions : ['']) : prev.actions,
-                      }))}
-                    >
-                      {t(`launcher.types.${type}`)}
-                    </button>
-                  ))}
+              {/* Sélecteur de type (masqué en free mode — app uniquement) */}
+              {!isFreeMode && (
+                <div className="streamdeck-type-selector">
+                  <label>{t('launcher.buttonType')}</label>
+                  <div className="streamdeck-type-options">
+                    {['app', 'system', 'profile'].map(type => (
+                      <button
+                        key={type}
+                        className={`streamdeck-type-option ${editingButton.type === type ? 'active' : ''}`}
+                        onClick={() => setEditingButton(prev => ({
+                          ...prev,
+                          type,
+                          action: type === 'system' ? (prev.type === 'system' ? prev.action : '') : prev.action,
+                          actions: type === 'profile' ? (prev.type === 'profile' ? prev.actions : ['']) : prev.actions,
+                        }))}
+                      >
+                        {t(`launcher.types.${type}`)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Prévisualisation */}
               <div className="streamdeck-preview">

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Loader, AlertCircle, CheckCircle } from 'lucide-react';
+import { Shield, Loader, AlertCircle, CheckCircle, Unlock, ShoppingCart } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { LicenseProvider } from '../contexts/LicenseContext';
+import { STORE_URL } from '../config';
+import appIcon from '../assets/app-icon.ico';
 import './LicenseGate.css';
 
 function LicenseGate({ children }) {
   const { t } = useTranslation();
   const [checking, setChecking] = useState(true);
   const [licensed, setLicensed] = useState(false);
+  const [freeMode, setFreeMode] = useState(false);
   const [key, setKey] = useState('');
   const [error, setError] = useState('');
   const [activating, setActivating] = useState(false);
@@ -56,6 +60,11 @@ function LicenseGate({ children }) {
     setActivating(false);
   };
 
+  const handleFreeMode = () => {
+    setFreeMode(true);
+    setLicensed(true);
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleActivate();
   };
@@ -64,14 +73,18 @@ function LicenseGate({ children }) {
     return (
       <div className="license-gate">
         <div className="license-loading">
-          <Loader size={32} className="license-spinner" />
+          <img src={appIcon} alt="" className="loading-app-icon" />
         </div>
       </div>
     );
   }
 
   if (licensed) {
-    return children;
+    return (
+      <LicenseProvider initialFreeMode={freeMode}>
+        {children}
+      </LicenseProvider>
+    );
   }
 
   return (
@@ -80,7 +93,7 @@ function LicenseGate({ children }) {
         <div className="license-icon">
           <Shield size={48} />
         </div>
-        <h1 className="license-title">Monitoring Dashboard</h1>
+        <h1 className="license-title">PulseDeck</h1>
         <p className="license-subtitle">{t('license.enterKey')}</p>
 
         <div className="license-form">
@@ -121,6 +134,23 @@ function LicenseGate({ children }) {
             <span>{error}</span>
           </div>
         )}
+
+        <button
+          className="license-buy-btn"
+          onClick={() => window.electronAPI?.openExternal(STORE_URL)}
+        >
+          <ShoppingCart size={18} />
+          {t('license.buyLicense')}
+        </button>
+
+        <div className="license-divider">
+          <span>ou</span>
+        </div>
+
+        <button className="license-free-btn" onClick={handleFreeMode}>
+          <Unlock size={18} />
+          {t('license.freeVersion')}
+        </button>
       </div>
     </div>
   );

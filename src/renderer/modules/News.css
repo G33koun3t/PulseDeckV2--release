@@ -59,6 +59,119 @@
   to { transform: rotate(360deg); }
 }
 
+/* Crypto section */
+.crypto-section {
+  flex-shrink: 0;
+  padding: 8px 16px 0;
+}
+
+.crypto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.crypto-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crypto-loading {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+/* Crypto ticker */
+.crypto-ticker {
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.crypto-ticker::before,
+.crypto-ticker::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.crypto-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-primary), transparent);
+}
+
+.crypto-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-primary), transparent);
+}
+
+.crypto-ticker-track {
+  display: flex;
+  gap: 20px;
+  animation: crypto-scroll 40s linear infinite;
+  width: max-content;
+}
+
+.crypto-ticker-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes crypto-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.crypto-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.crypto-symbol {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.crypto-price {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.crypto-change {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.crypto-change.up {
+  color: #2ecc71;
+}
+
+.crypto-change.down {
+  color: #e74c3c;
+}
+
 /* Tabs catégories */
 .news-tabs {
   display: flex;

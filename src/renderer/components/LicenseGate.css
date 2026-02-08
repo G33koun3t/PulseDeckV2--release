@@ -5,6 +5,53 @@
   align-items: center;
   justify-content: center;
   background: var(--bg-primary, #0a0a0f);
+  position: relative;
+}
+
+.license-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 24px 0;
+  gap: 16px;
+}
+
+.license-divider::before,
+.license-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color, #2a2a3a);
+}
+
+.license-divider span {
+  font-size: 14px;
+  color: var(--text-muted, #52525b);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.license-free-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid var(--border-color, #2a2a3a);
+  border-radius: 12px;
+  color: var(--text-secondary, #71717a);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.license-free-btn:hover {
+  background: var(--bg-tertiary, #1a1a2e);
+  border-color: var(--text-secondary, #71717a);
+  color: var(--text-primary, #e4e4e7);
 }
 
 .license-loading {
@@ -104,6 +151,29 @@
 .license-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.license-buy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.license-buy-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 .license-error {

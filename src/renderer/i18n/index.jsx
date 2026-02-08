@@ -44,10 +44,10 @@ export function I18nProvider({ children }) {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
-        return parsed.language || 'fr';
+        return parsed.language || 'en';
       }
     } catch {}
-    return 'fr';
+    return 'en';
   });
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function I18nProvider({ children }) {
         const data = localStorage.getItem(STORAGE_KEY);
         if (data) {
           const parsed = JSON.parse(data);
-          const newLang = parsed.language || 'fr';
+          const newLang = parsed.language || 'en';
           setLang(prev => prev !== newLang ? newLang : prev);
         }
       } catch {}
@@ -65,8 +65,8 @@ export function I18nProvider({ children }) {
     return () => window.removeEventListener(SETTINGS_CHANGED_EVENT, handler);
   }, []);
 
-  const translations = LOCALES[lang] || LOCALES.fr;
-  const fallback = LOCALES.fr;
+  const translations = LOCALES[lang] || LOCALES.en;
+  const fallback = LOCALES.en;
 
   const t = useCallback((key, params) => {
     let value = getNestedValue(translations, key);

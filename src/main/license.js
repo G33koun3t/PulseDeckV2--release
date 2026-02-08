@@ -5,10 +5,11 @@ const crypto = require('crypto');
 const { machineId } = require('node-machine-id');
 
 // ============================================================
-// LEMONSQUEEZY - API de licence
-// Aucune config nécessaire côté code, tout se gère sur le dashboard
+// GUMROAD - API de licence
+// Un seul endpoint verify, pas d'activate/deactivate séparés
 // ============================================================
-const LEMONSQUEEZY_API = 'https://api.lemonsqueezy.com/v1/licenses';
+const GUMROAD_API = 'https://api.gumroad.com/v2/licenses/verify';
+const PRODUCT_PERMALINK = 'PulseDeck';
 
 const LICENSE_FILE = 'license.json';
 const GRACE_PERIOD_DAYS = 7;
@@ -45,44 +46,17 @@ function deleteLicense() {
   }
 }
 
-// Valider une licence existante (avec instance_id)
-async function validateLicense(key, instanceId) {
-  const response = await fetch(`${LEMONSQUEEZY_API}/validate`, {
+// Appeler l'API Gumroad verify
+async function verifyOnApi(key, incrementUses = false) {
+  const params = new URLSearchParams();
+  params.append('product_permalink', PRODUCT_PERMALINK);
+  params.append('license_key', key);
+  params.append('increment_uses_count', incrementUses ? 'true' : 'false');
+
+  const response = await fetch(GUMROAD_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({
-      license_key: key,
-      instance_id: instanceId
-    })
-  });
-  return await response.json();
-}
-
-// Activer une licence sur cette machine
-async function activateOnApi(key) {
-  const fingerprint = await generateFingerprint();
-
-  const response = await fetch(`${LEMONSQUEEZY_API}/activate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({
-      license_key: key,
-      instance_name: fingerprint
-    })
-  });
-
-  return { result: await response.json(), fingerprint };
-}
-
-// Désactiver une licence
-async function deactivateOnApi(key, instanceId) {
-  const response = await fetch(`${LEMONSQUEEZY_API}/deactivate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({
-      license_key: key,
-      instance_id: instanceId
-    })
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
   });
 
   return await response.json();
@@ -92,7 +66,7 @@ async function deactivateOnApi(key, instanceId) {
 async function checkLicense() {
   const license = loadLicense();
 
-  if (!license || !license.key || !license.instanceId) {
+  if (!license || !license.key) {
     return { valid: false, reason: 'no_license' };
   }
 
@@ -102,19 +76,24 @@ async function checkLicense() {
     return { valid: false, reason: 'wrong_machine' };
   }
 
-  // Tenter la validation en ligne
+  // Tenter la validation en ligne (sans incrémenter les uses)
   try {
-    const result = await validateLicense(license.key, license.instanceId);
+    const result = await verifyOnApi(license.key, false);
 
-    if (result.valid) {
+    if (result.success) {
+      // Vérifier si remboursé ou contesté
+      if (result.purchase?.refunded) {
+        return { valid: false, reason: 'refunded' };
+      }
+      if (result.purchase?.chargebacked) {
+        return { valid: false, reason: 'chargebacked' };
+      }
+
       saveLicense({ ...license, lastValidated: new Date().toISOString() });
       return { valid: true, license };
     }
 
     // Licence invalide
-    const status = result.license_key?.status;
-    if (status === 'expired') return { valid: false, reason: 'expired' };
-    if (status === 'disabled') return { valid: false, reason: 'suspended' };
     return { valid: false, reason: 'invalid' };
   } catch {
     // Hors-ligne : vérifier la période de grâce
@@ -131,18 +110,27 @@ async function checkLicense() {
 
 // Activer une clé de licence
 async function activate(key) {
-  let result, fingerprint;
+  let result;
   try {
-    ({ result, fingerprint } = await activateOnApi(key));
+    // Incrémenter les uses pour compter l'activation
+    result = await verifyOnApi(key, true);
   } catch {
     return { success: false, error: 'network_error' };
   }
 
-  // Activation réussie
-  if (result.activated) {
+  // Clé valide
+  if (result.success) {
+    // Vérifier si remboursé ou contesté
+    if (result.purchase?.refunded) {
+      return { success: false, error: 'refunded' };
+    }
+    if (result.purchase?.chargebacked) {
+      return { success: false, error: 'chargebacked' };
+    }
+
+    const fingerprint = await generateFingerprint();
     const license = {
       key,
-      instanceId: result.instance.id,
       fingerprint,
       lastValidated: new Date().toISOString(),
       activatedAt: new Date().toISOString()
@@ -152,37 +140,17 @@ async function activate(key) {
   }
 
   // Erreur
-  const errorMsg = result.error || '';
+  const errorMsg = (result.message || '').toLowerCase();
 
-  if (errorMsg.includes('limit')) {
-    return { success: false, error: 'already_activated' };
-  }
-  if (errorMsg.includes('not found') || errorMsg.includes('invalid')) {
+  if (errorMsg.includes('not found') || errorMsg.includes('invalid') || errorMsg.includes('does not exist')) {
     return { success: false, error: 'invalid_key' };
-  }
-  if (errorMsg.includes('expired')) {
-    return { success: false, error: 'expired' };
-  }
-  if (errorMsg.includes('disabled')) {
-    return { success: false, error: 'suspended' };
   }
 
   return { success: false, error: 'invalid_key' };
 }
 
-// Désactiver la licence
+// Désactiver la licence (suppression locale uniquement — Gumroad n'a pas d'API deactivate)
 async function deactivate() {
-  const license = loadLicense();
-  if (!license) return { success: false };
-
-  try {
-    if (license.instanceId && license.key) {
-      await deactivateOnApi(license.key, license.instanceId);
-    }
-  } catch {
-    // Même si l'API échoue, supprimer le fichier local
-  }
-
   deleteLicense();
   return { success: true };
 }

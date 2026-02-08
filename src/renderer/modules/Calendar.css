@@ -182,32 +182,32 @@
   color: var(--text-primary);
 }
 
-.event-bars {
+.event-dots {
   position: absolute;
-  top: 65%;
-  bottom: 3px;
-  left: 3px;
-  right: 3px;
-}
-
-.event-bar-v {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 2px;
-}
-
-.event-count-v {
-  position: absolute;
+  bottom: 4px;
+  left: 0;
   right: 0;
-  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.event-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.event-dots-more {
   font-size: 9px;
   color: var(--text-muted);
   font-weight: 600;
   line-height: 1;
 }
 
-.calendar-day.today .event-count-v {
+.calendar-day.today .event-dots-more {
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -891,6 +891,13 @@
 .google-auth-status.disconnected small {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.google-auth-desc {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .google-login-btn {

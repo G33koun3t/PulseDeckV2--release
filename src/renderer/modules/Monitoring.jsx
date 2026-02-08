@@ -8,6 +8,8 @@ import {
 import useModuleConfig from '../hooks/useModuleConfig';
 import ModuleSettingsPanel from '../components/ModuleSettingsPanel';
 import { useTranslation } from '../i18n';
+import { useLicense } from '../contexts/LicenseContext';
+import appIcon from '../assets/app-icon.ico';
 import './Monitoring.css';
 
 const DEFAULT_WIDGETS = [
@@ -170,6 +172,7 @@ const DEFAULT_ALERT_CONFIG = {
 
 function MonitoringModule() {
   const { t } = useTranslation();
+  const { isFreeMode } = useLicense();
   const [staticInfo, setStaticInfo] = useState(null);
   const [lightData, setLightData] = useState(null);   // CPU, RAM
   const [networkData, setNetworkData] = useState(null); // networkStats (séparé)
@@ -285,7 +288,8 @@ function MonitoringModule() {
         const gpuLoad = primaryGpu?.utilizationGpu || 0;
 
         if (historyRef.current.length > 0) {
-          historyRef.current[historyRef.current.length - 1].gpuLoad = gpuLoad;
+          const lastIdx = historyRef.current.length - 1;
+          historyRef.current[lastIdx] = { ...historyRef.current[lastIdx], gpuLoad };
           setHistory([...historyRef.current]);
         }
       }
@@ -354,17 +358,24 @@ function MonitoringModule() {
     window.electronAPI?.setGamingManual?.(next);
   }, [gamingManual]);
 
+  const [speedtestError, setSpeedtestError] = useState(null);
+
   const runSpeedtest = useCallback(async () => {
     if (speedtestRunning) return;
     setSpeedtestRunning(true);
+    setSpeedtestError(null);
     try {
       const result = await window.electronAPI.runSpeedtest();
       if (result.success) {
         setSpeedtestResult(result.data);
         localStorage.setItem('monitoring_speedtest', JSON.stringify(result.data));
+      } else {
+        console.error('Speedtest failed:', result.error);
+        setSpeedtestError(result.error || 'Speedtest failed');
       }
     } catch (error) {
       console.error('Speedtest error:', error);
+      setSpeedtestError(error.message || 'Speedtest error');
     } finally {
       setSpeedtestRunning(false);
     }
@@ -373,7 +384,7 @@ function MonitoringModule() {
   if (loading || !staticInfo) {
     return (
       <div className="module-placeholder">
-        <Activity size={48} className="spinning" />
+        <img src={appIcon} alt="" className="loading-app-icon" />
         <p>{t('monitoring.loadingSystem')}</p>
       </div>
     );
@@ -586,6 +597,7 @@ function MonitoringModule() {
         ) : (
           <div className="speedtest-empty">
             <span>{t('monitoring.noSpeedtest')}</span>
+            {speedtestError && <span className="speedtest-error">{speedtestError}</span>}
           </div>
         )}
       </div>
@@ -670,13 +682,18 @@ function MonitoringModule() {
                 <Thermometer size={16} /> {cpuTemp}°C
               </span>
             )}
-            <button
-              className={`gaming-toggle-btn ${gamingMode ? 'active' : ''}`}
-              onClick={toggleGamingManual}
-              title={gamingMode ? t('monitoring.gamingModeActive') : t('monitoring.gamingMode')}
-            >
-              <Gamepad2 size={16} />
-            </button>
+            {!isFreeMode && (
+              <button
+                className={`gaming-toggle-btn ${gamingMode ? 'active' : ''}`}
+                onClick={toggleGamingManual}
+              >
+                <Gamepad2 size={14} />
+                <span className="gaming-toggle-label">{t('monitoring.gamingMode')}</span>
+                <span className={`gaming-toggle-badge ${gamingMode ? 'on' : 'off'}`}>
+                  {gamingMode ? t('settings.enabled') : t('settings.disabled')}
+                </span>
+              </button>
+            )}
             <button className="monitoring-settings-btn" onClick={() => setShowSettings(true)} title={t('common.settings')}>
               <Settings size={16} />
             </button>

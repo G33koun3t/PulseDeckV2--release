@@ -111,9 +111,10 @@ export const DEFAULT_SETTINGS = {
     gridColumns: 7,
     gridRows: 5,
   },
-  language: 'fr',
+  language: 'en',
   sidebarOrder: null, // null = ordre par défaut de menuItems
   hiddenModules: [], // modules masqués de la sidebar
+  gamingMode: true, // détection automatique du mode gaming
 };
 
 function loadSettings() {
@@ -127,9 +128,10 @@ function loadSettings() {
         colors: { ...DEFAULT_SETTINGS.theme.colors, ...parsed.theme?.colors },
       },
       layout: { ...DEFAULT_SETTINGS.layout, ...parsed.layout },
-      language: parsed.language || 'fr',
+      language: parsed.language || 'en',
       sidebarOrder: parsed.sidebarOrder || null,
       hiddenModules: parsed.hiddenModules || [],
+      gamingMode: parsed.gamingMode ?? true,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

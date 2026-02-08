@@ -203,6 +203,18 @@ body {
   font-size: 16px;
 }
 
+/* Loading app icon */
+.loading-app-icon {
+  width: 64px;
+  height: 64px;
+  animation: pulse-icon 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
 /* Module container générique */
 .module-container {
   width: 100%;

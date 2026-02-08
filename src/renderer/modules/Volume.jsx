@@ -6,6 +6,7 @@ import {
 import useModuleConfig from '../hooks/useModuleConfig';
 import ModuleSettingsPanel from '../components/ModuleSettingsPanel';
 import { useTranslation } from '../i18n';
+import appIcon from '../assets/app-icon.ico';
 import './Volume.css';
 
 const DEFAULT_WIDGETS = [
@@ -372,7 +373,7 @@ function VolumeModule() {
     return (
       <div className="volume-module">
         <div className="volume-loading">
-          <RefreshCw size={32} className="spinning" />
+          <img src={appIcon} alt="" className="loading-app-icon" />
           <span>{t('volume.loading')}</span>
         </div>
       </div>

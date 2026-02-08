@@ -2,12 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Settings, RotateCcw, ChevronUp, ChevronDown, Check,
   Monitor, Sun, Calendar, Home, Volume2, Wrench,
-  Newspaper, ClipboardList,
-  Eye, EyeOff, Plus, Trash2, Pencil, X, Save, Globe, Shield
+  Newspaper, ClipboardList, Video, BookOpen,
+  Eye, EyeOff, Plus, Trash2, Pencil, X, Save, Globe, Shield, ShoppingCart,
+  MonitorSmartphone, Download, RefreshCw, CheckCircle, AlertCircle, Loader
 } from 'lucide-react';
 import { WEBVIEW_ICONS, WEBVIEW_ICON_NAMES, getWebviewIcon } from '../utils/webviewIcons';
 import useTheme, { THEMES, DEFAULT_SETTINGS } from '../hooks/useTheme';
 import { useTranslation, LOCALE_META } from '../i18n';
+import { useLicense } from '../contexts/LicenseContext';
+import { STORE_URL } from '../config';
 import './Settings.css';
 
 // Icônes des modules natifs
@@ -20,12 +23,13 @@ const MODULE_ICONS = {
   timer: Wrench,
   news: Newspaper,
   clipboard: ClipboardList,
+  obs: Video,
   settings: Settings,
 };
 
 const DEFAULT_ORDER = [
   'monitoring', 'weather', 'calendar', 'homeassistant',
-  'volume', 'timer', 'news', 'clipboard', 'settings'
+  'volume', 'timer', 'news', 'clipboard', 'obs', 'settings'
 ];
 
 const MAX_WEBVIEWS = 5;
@@ -92,11 +96,21 @@ function saveCustomWebviews(webviews) {
 function SettingsModule() {
   const { settings, applyColors, applyLayout, updateSettings, resetToDefaults } = useTheme();
   const { t, lang, dateLocale } = useTranslation();
+  const { isFreeMode } = useLicense();
+  const maxWebviews = isFreeMode ? 1 : MAX_WEBVIEWS;
   const [customWebviews, setCustomWebviews] = useState(loadCustomWebviews);
   const [editingWebview, setEditingWebview] = useState(null);
   const [licenseInfo, setLicenseInfo] = useState(null);
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [autoStart, setAutoStart] = useState(false);
+  const [activateKey, setActivateKey] = useState('');
+  const [activateError, setActivateError] = useState('');
+  const [activating, setActivating] = useState(false);
+  const [displays, setDisplays] = useState([]);
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [updateVersion, setUpdateVersion] = useState('');
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [appVersion, setAppVersion] = useState('');
 
   // Charger les infos de licence + auto-start au montage
   useEffect(() => {
@@ -109,6 +123,19 @@ function SettingsModule() {
     }
     if (window.electronAPI?.getAutoStart) {
       window.electronAPI.getAutoStart().then(setAutoStart).catch(() => {});
+    }
+    if (window.electronAPI?.getDisplays) {
+      window.electronAPI.getDisplays().then(setDisplays).catch(() => {});
+    }
+    if (window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
+    }
+    if (window.electronAPI?.onUpdateStatus) {
+      window.electronAPI.onUpdateStatus((data) => {
+        setUpdateStatus(data.status);
+        if (data.version) setUpdateVersion(data.version);
+        if (data.percent != null) setUpdateProgress(data.percent);
+      });
     }
   }, []);
 
@@ -201,7 +228,7 @@ function SettingsModule() {
 
   // ---- Gestion webviews ----
   const handleAddWebview = () => {
-    if (customWebviews.length >= MAX_WEBVIEWS) return;
+    if (customWebviews.length >= maxWebviews) return;
     setEditingWebview({
       id: `webview_${Date.now()}`,
       name: '',
@@ -255,6 +282,43 @@ function SettingsModule() {
     setEditingWebview(null);
   };
 
+  // Changement d'écran cible
+  const handleDisplayChange = async (displayId) => {
+    if (!window.electronAPI?.setTargetDisplay) return;
+    const result = await window.electronAPI.setTargetDisplay(displayId);
+    if (result.success) {
+      // Rafraîchir la liste des écrans
+      const updated = await window.electronAPI.getDisplays();
+      setDisplays(updated);
+    }
+  };
+
+  // Activation de licence depuis Settings (free mode)
+  const handleSettingsActivate = async () => {
+    if (!activateKey.trim() || activating) return;
+    setActivateError('');
+    setActivating(true);
+    try {
+      const result = await window.electronAPI.activateLicense(activateKey.trim());
+      if (result.success) {
+        window.location.reload();
+      } else {
+        const errorKey = {
+          invalid_key: 'license.invalidKey',
+          already_activated: 'license.alreadyActivated',
+          network_error: 'license.networkError',
+          expired: 'license.expired',
+          suspended: 'license.suspended',
+          activation_failed: 'license.activationFailed',
+        }[result.error] || 'license.invalidKey';
+        setActivateError(t(errorKey));
+      }
+    } catch {
+      setActivateError(t('license.networkError'));
+    }
+    setActivating(false);
+  };
+
   return (
     <div className="settings-module">
       {/* Header */}
@@ -291,38 +355,59 @@ function SettingsModule() {
             ))}
           </div>
 
-          <h3 className="settings-section-title">{t('settings.general')}</h3>
-          <div className="autostart-row">
-            <label className="autostart-label">{t('settings.autoStart')}</label>
-            <button
-              className={`autostart-toggle ${autoStart ? 'active' : ''}`}
-              onClick={async () => {
-                const next = !autoStart;
-                setAutoStart(next);
-                if (window.electronAPI?.setAutoStart) {
-                  await window.electronAPI.setAutoStart(next);
-                }
-              }}
-            >
-              <div className="autostart-toggle-knob" />
-            </button>
-          </div>
+          {!isFreeMode && (
+            <>
+              <h3 className="settings-section-title">{t('settings.general')}</h3>
+              <div className="autostart-row">
+                <label className="autostart-label">{t('settings.autoStart')}</label>
+                <button
+                  className={`autostart-toggle ${autoStart ? 'active' : ''}`}
+                  onClick={async () => {
+                    const next = !autoStart;
+                    setAutoStart(next);
+                    if (window.electronAPI?.setAutoStart) {
+                      await window.electronAPI.setAutoStart(next);
+                    }
+                  }}
+                >
+                  <div className="autostart-toggle-knob" />
+                </button>
+              </div>
 
-          <div className="autostart-row">
-            <label className="autostart-label">{t('settings.gamingModeAuto')}</label>
-            <button
-              className={`autostart-toggle ${settings.gamingMode !== false ? 'active' : ''}`}
-              onClick={() => {
-                const next = settings.gamingMode === false;
-                updateSettings({ ...settings, gamingMode: next });
-                if (window.electronAPI?.setGamingAuto) {
-                  window.electronAPI.setGamingAuto(next);
-                }
-              }}
-            >
-              <div className="autostart-toggle-knob" />
-            </button>
-          </div>
+              <div className="autostart-row">
+                <label className="autostart-label">
+                  {t('settings.gamingModeAuto')}
+                  <span className={`toggle-status ${settings.gamingMode ? 'on' : 'off'}`}>
+                    {settings.gamingMode ? t('settings.enabled') : t('settings.disabled')}
+                  </span>
+                </label>
+                <button
+                  className={`autostart-toggle ${settings.gamingMode ? 'active' : ''}`}
+                  onClick={() => {
+                    const next = !settings.gamingMode;
+                    updateSettings({ ...settings, gamingMode: next });
+                    if (window.electronAPI?.setGamingAuto) {
+                      window.electronAPI.setGamingAuto(next);
+                    }
+                  }}
+                >
+                  <div className="autostart-toggle-knob" />
+                </button>
+              </div>
+
+              <button
+                className="settings-guide-btn"
+                onClick={() => {
+                  if (window.electronAPI?.openGuide) {
+                    window.electronAPI.openGuide(lang);
+                  }
+                }}
+              >
+                <BookOpen size={18} />
+                <span>{t('settings.userGuide')}</span>
+              </button>
+            </>
+          )}
 
           {/* Thème */}
           <h3 className="settings-section-title">{t('settings.theme')}</h3>
@@ -349,34 +434,38 @@ function SettingsModule() {
             ))}
           </div>
 
-          {/* Couleurs personnalisées */}
-          <h4 className="settings-subsection-title">{t('settings.customColors')}</h4>
-          <div className="color-groups">
-            {COLOR_GROUPS.map((group) => (
-              <div key={group.titleKey} className="color-group">
-                <span className="color-group-title">{t(group.titleKey)}</span>
-                <div className="color-group-pickers">
-                  {group.colors.map(({ key, labelKey }) => (
-                    <div key={key} className="color-picker-row">
-                      <label className="color-picker-label">{t(labelKey)}</label>
-                      <input
-                        type="color"
-                        className="color-picker-input"
-                        value={settings.theme.colors[key]}
-                        onChange={(e) => handleColorChange(key, e.target.value)}
-                      />
-                      <span className="color-picker-hex">{settings.theme.colors[key]}</span>
+          {/* Couleurs personnalisées (masqué en free mode) */}
+          {!isFreeMode && (
+            <>
+              <h4 className="settings-subsection-title">{t('settings.customColors')}</h4>
+              <div className="color-groups">
+                {COLOR_GROUPS.map((group) => (
+                  <div key={group.titleKey} className="color-group">
+                    <span className="color-group-title">{t(group.titleKey)}</span>
+                    <div className="color-group-pickers">
+                      {group.colors.map(({ key, labelKey }) => (
+                        <div key={key} className="color-picker-row">
+                          <label className="color-picker-label">{t(labelKey)}</label>
+                          <input
+                            type="color"
+                            className="color-picker-input"
+                            value={settings.theme.colors[key]}
+                            onChange={(e) => handleColorChange(key, e.target.value)}
+                          />
+                          <span className="color-picker-hex">{settings.theme.colors[key]}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Section Webviews */}
         <div className="settings-section settings-webviews">
-          <h3 className="settings-section-title">{t('settings.webviews')} ({customWebviews.length}/{MAX_WEBVIEWS})</h3>
+          <h3 className="settings-section-title">{t('settings.webviews')} ({customWebviews.length}/{maxWebviews})</h3>
 
           {/* Liste des webviews existantes */}
           <div className="webview-list">
@@ -411,7 +500,7 @@ function SettingsModule() {
               <div className="webview-empty">
                 <Globe size={32} />
                 <p>{t('settings.noWebviews')}</p>
-                <small>{t('settings.addWebviewsHint', { max: MAX_WEBVIEWS })}</small>
+                <small>{t('settings.addWebviewsHint', { max: maxWebviews })}</small>
               </div>
             )}
           </div>
@@ -479,7 +568,7 @@ function SettingsModule() {
               </div>
             </div>
           ) : (
-            customWebviews.length < MAX_WEBVIEWS && (
+            customWebviews.length < maxWebviews && (
               <button className="webview-add-btn" onClick={handleAddWebview}>
                 <Plus size={18} />
                 <span>{t('settings.addWebview')}</span>
@@ -491,6 +580,33 @@ function SettingsModule() {
         {/* Section Disposition */}
         <div className="settings-section settings-layout">
           <h3 className="settings-section-title">{t('settings.layout')}</h3>
+
+          {/* Sélecteur d'écran */}
+          {displays.length > 1 && (
+            <>
+              <h4 className="settings-subsection-title">
+                <MonitorSmartphone size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                {t('settings.targetDisplay')}
+              </h4>
+              <div className="display-selector-grid">
+                {displays.map(d => (
+                  <button
+                    key={d.id}
+                    className={`display-selector-btn ${d.isCurrent ? 'active' : ''}`}
+                    onClick={() => handleDisplayChange(d.id)}
+                    title={`${d.label} @ (${d.bounds.x}, ${d.bounds.y})`}
+                  >
+                    <Monitor size={20} />
+                    <span className="display-resolution">{d.label}</span>
+                    <span className="display-tags">
+                      {d.isPrimary && <span className="display-tag primary">{t('settings.primaryDisplay')}</span>}
+                      {d.isCurrent && <span className="display-tag current">{t('settings.currentDisplay')}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="layout-sliders">
             <div className="layout-slider-row">
@@ -525,8 +641,8 @@ function SettingsModule() {
                 <span className="stepper-value">{settings.layout.gridColumns}</span>
                 <button
                   className="stepper-btn"
-                  onClick={() => settings.layout.gridColumns < 12 && handleLayoutChange('gridColumns', settings.layout.gridColumns + 1)}
-                  disabled={settings.layout.gridColumns >= 12}
+                  onClick={() => settings.layout.gridColumns < (isFreeMode ? 4 : 12) && handleLayoutChange('gridColumns', settings.layout.gridColumns + 1)}
+                  disabled={settings.layout.gridColumns >= (isFreeMode ? 4 : 12)}
                 >+</button>
               </div>
             </div>
@@ -541,8 +657,8 @@ function SettingsModule() {
                 <span className="stepper-value">{settings.layout.gridRows}</span>
                 <button
                   className="stepper-btn"
-                  onClick={() => settings.layout.gridRows < 5 && handleLayoutChange('gridRows', settings.layout.gridRows + 1)}
-                  disabled={settings.layout.gridRows >= 5}
+                  onClick={() => settings.layout.gridRows < (isFreeMode ? 4 : 5) && handleLayoutChange('gridRows', settings.layout.gridRows + 1)}
+                  disabled={settings.layout.gridRows >= (isFreeMode ? 4 : 5)}
                 >+</button>
               </div>
             </div>
@@ -551,47 +667,127 @@ function SettingsModule() {
             </div>
           </div>
 
-          {/* Ordre des modules */}
-          <h4 className="settings-subsection-title">{t('settings.moduleOrder')}</h4>
-          <div className="module-order-list">
-            {currentOrder.map((moduleId, index) => {
-              const IconComp = getModuleIcon(moduleId);
-              const label = getModuleLabel(moduleId);
-              if (!IconComp) return null;
-              const isHidden = (settings.hiddenModules || []).includes(moduleId);
-              const isSettings = moduleId === 'settings';
-              return (
-                <div key={moduleId} className={`module-order-item ${isHidden ? 'hidden-module' : ''}`}>
-                  <IconComp size={18} />
-                  <span className="module-order-name">{label}</span>
-                  {!isSettings && (
-                    <button
-                      className={`module-visibility-btn ${isHidden ? 'off' : ''}`}
-                      onClick={() => handleToggleModule(moduleId)}
-                      title={isHidden ? t('common.show') : t('common.hide')}
-                    >
-                      {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  )}
-                  <div className="module-order-arrows">
-                    <button
-                      className="module-order-btn"
-                      onClick={() => handleMoveModule(index, -1)}
-                      disabled={index === 0}
-                    >
-                      <ChevronUp size={16} />
-                    </button>
-                    <button
-                      className="module-order-btn"
-                      onClick={() => handleMoveModule(index, 1)}
-                      disabled={index === currentOrder.length - 1}
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Ordre des modules (masqué en free mode) */}
+          {!isFreeMode && (
+            <>
+              <h4 className="settings-subsection-title">{t('settings.moduleOrder')}</h4>
+              <div className="module-order-list">
+                {currentOrder.map((moduleId, index) => {
+                  const IconComp = getModuleIcon(moduleId);
+                  const label = getModuleLabel(moduleId);
+                  if (!IconComp) return null;
+                  const isHidden = (settings.hiddenModules || []).includes(moduleId);
+                  const isSettings = moduleId === 'settings';
+                  return (
+                    <div key={moduleId} className={`module-order-item ${isHidden ? 'hidden-module' : ''}`}>
+                      <IconComp size={18} />
+                      <span className="module-order-name">{label}</span>
+                      {!isSettings && (
+                        <button
+                          className={`module-visibility-btn ${isHidden ? 'off' : ''}`}
+                          onClick={() => handleToggleModule(moduleId)}
+                          title={isHidden ? t('common.show') : t('common.hide')}
+                        >
+                          {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      )}
+                      <div className="module-order-arrows">
+                        <button
+                          className="module-order-btn"
+                          onClick={() => handleMoveModule(index, -1)}
+                          disabled={index === 0}
+                        >
+                          <ChevronUp size={16} />
+                        </button>
+                        <button
+                          className="module-order-btn"
+                          onClick={() => handleMoveModule(index, 1)}
+                          disabled={index === currentOrder.length - 1}
+                        >
+                          <ChevronDown size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Section Mises à jour */}
+        <div className="settings-section settings-updates">
+          <h3 className="settings-section-title">
+            <Download size={18} />
+            <span>{t('updates.title')}</span>
+          </h3>
+
+          <div className="update-version-row">
+            <span className="update-version-label">{t('updates.currentVersion')}</span>
+            <span className="update-version-value">{appVersion || '...'}</span>
+          </div>
+
+          {/* Statut */}
+          {updateStatus === 'available' && (
+            <div className="update-status-banner available">
+              <Download size={16} />
+              <span>{t('updates.available')} — {t('updates.newVersion', { version: updateVersion })}</span>
+            </div>
+          )}
+
+          {updateStatus === 'downloading' && (
+            <div className="update-status-banner downloading">
+              <Loader size={16} className="spin" />
+              <span>{t('updates.downloading')} {t('updates.progress', { percent: updateProgress })}</span>
+              <div className="update-progress-bar">
+                <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+              </div>
+            </div>
+          )}
+
+          {updateStatus === 'ready' && (
+            <div className="update-status-banner ready">
+              <CheckCircle size={16} />
+              <span>{t('updates.ready')} — {t('updates.newVersion', { version: updateVersion })}</span>
+            </div>
+          )}
+
+          {updateStatus === 'up-to-date' && (
+            <div className="update-status-banner up-to-date">
+              <CheckCircle size={16} />
+              <span>{t('updates.upToDate')}</span>
+            </div>
+          )}
+
+          {updateStatus === 'error' && (
+            <div className="update-status-banner error">
+              <AlertCircle size={16} />
+              <span>{t('updates.error')}</span>
+            </div>
+          )}
+
+          <div className="update-actions">
+            {updateStatus === 'ready' ? (
+              <button
+                className="update-install-btn"
+                onClick={() => window.electronAPI?.quitAndInstall()}
+              >
+                <Download size={16} />
+                <span>{t('updates.install')}</span>
+              </button>
+            ) : (
+              <button
+                className="update-check-btn"
+                onClick={() => {
+                  setUpdateStatus('checking');
+                  window.electronAPI?.checkForUpdates();
+                }}
+                disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+              >
+                {updateStatus === 'checking' ? <Loader size={16} className="spin" /> : <RefreshCw size={16} />}
+                <span>{updateStatus === 'checking' ? t('updates.checking') : t('updates.checkForUpdates')}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -602,75 +798,119 @@ function SettingsModule() {
             <span>{t('license.title')}</span>
           </h3>
 
-          <div className="license-status-row">
-            <span className="license-status-label">{t('license.status')}</span>
-            <span className={`license-status-badge ${licenseInfo ? 'active' : 'inactive'}`}>
-              {licenseInfo ? t('license.active') : t('license.inactive')}
-            </span>
-          </div>
-
-          {licenseInfo && (
+          {isFreeMode ? (
             <>
-              <div className="license-info-list">
-                <div className="license-info-item">
-                  <span className="license-info-label">{t('license.key')}</span>
-                  <span className="license-info-value license-key-value">{licenseInfo.key}</span>
-                </div>
-                <div className="license-info-item">
-                  <span className="license-info-label">{t('license.activatedAt')}</span>
-                  <span className="license-info-value">
-                    {new Date(licenseInfo.activatedAt).toLocaleDateString(dateLocale, {
-                      year: 'numeric', month: 'long', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-                <div className="license-info-item">
-                  <span className="license-info-label">{t('license.lastValidated')}</span>
-                  <span className="license-info-value">
-                    {new Date(licenseInfo.lastValidated).toLocaleDateString(dateLocale, {
-                      year: 'numeric', month: 'long', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </span>
-                </div>
+              <div className="license-status-row">
+                <span className="license-status-label">{t('license.status')}</span>
+                <span className="license-status-badge inactive">{t('license.freeLabel')}</span>
+              </div>
+              <p className="license-upgrade-hint">{t('license.upgradeHint')}</p>
+              <div className="license-activate-form">
+                <input
+                  type="text"
+                  className="license-activate-input"
+                  placeholder={t('license.placeholder')}
+                  value={activateKey}
+                  onChange={(e) => setActivateKey(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && activateKey.trim() && !activating) {
+                      handleSettingsActivate();
+                    }
+                  }}
+                  disabled={activating}
+                />
+                <button
+                  className="license-activate-btn"
+                  disabled={activating || !activateKey.trim()}
+                  onClick={handleSettingsActivate}
+                >
+                  {activating ? t('license.activating') : t('license.activate')}
+                </button>
+              </div>
+              {activateError && (
+                <div className="license-activate-error">{activateError}</div>
+              )}
+              <button
+                className="license-buy-settings-btn"
+                onClick={() => window.electronAPI?.openExternal(STORE_URL)}
+              >
+                <ShoppingCart size={16} />
+                <span>{t('license.buyLicense')}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="license-status-row">
+                <span className="license-status-label">{t('license.status')}</span>
+                <span className={`license-status-badge ${licenseInfo ? 'active' : 'inactive'}`}>
+                  {licenseInfo ? t('license.active') : t('license.inactive')}
+                </span>
               </div>
 
-              <button
-                className="license-deactivate-btn"
-                onClick={() => setShowDeactivateConfirm(true)}
-              >
-                <X size={16} />
-                <span>{t('license.deactivate')}</span>
-              </button>
-
-              {showDeactivateConfirm && (
-                <div className="license-confirm-overlay" onClick={() => setShowDeactivateConfirm(false)}>
-                  <div className="license-confirm-dialog" onClick={e => e.stopPropagation()}>
-                    <p>{t('license.confirmDeactivate')}</p>
-                    <div className="license-confirm-actions">
-                      <button
-                        className="license-confirm-cancel"
-                        onClick={() => setShowDeactivateConfirm(false)}
-                      >
-                        {t('license.cancel')}
-                      </button>
-                      <button
-                        className="license-confirm-yes"
-                        onClick={async () => {
-                          try {
-                            await window.electronAPI.deactivateLicense();
-                            window.location.reload();
-                          } catch (err) {
-                            setShowDeactivateConfirm(false);
-                          }
-                        }}
-                      >
-                        {t('license.confirmYes')}
-                      </button>
+              {licenseInfo && (
+                <>
+                  <div className="license-info-list">
+                    <div className="license-info-item">
+                      <span className="license-info-label">{t('license.key')}</span>
+                      <span className="license-info-value license-key-value">{licenseInfo.key}</span>
+                    </div>
+                    <div className="license-info-item">
+                      <span className="license-info-label">{t('license.activatedAt')}</span>
+                      <span className="license-info-value">
+                        {new Date(licenseInfo.activatedAt).toLocaleDateString(dateLocale, {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div className="license-info-item">
+                      <span className="license-info-label">{t('license.lastValidated')}</span>
+                      <span className="license-info-value">
+                        {new Date(licenseInfo.lastValidated).toLocaleDateString(dateLocale, {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
                     </div>
                   </div>
-                </div>
+
+                  <button
+                    className="license-deactivate-btn"
+                    onClick={() => setShowDeactivateConfirm(true)}
+                  >
+                    <X size={16} />
+                    <span>{t('license.deactivate')}</span>
+                  </button>
+
+                  {showDeactivateConfirm && (
+                    <div className="license-confirm-overlay" onClick={() => setShowDeactivateConfirm(false)}>
+                      <div className="license-confirm-dialog" onClick={e => e.stopPropagation()}>
+                        <p>{t('license.confirmDeactivate')}</p>
+                        <div className="license-confirm-actions">
+                          <button
+                            className="license-confirm-cancel"
+                            onClick={() => setShowDeactivateConfirm(false)}
+                          >
+                            {t('license.cancel')}
+                          </button>
+                          <button
+                            className="license-confirm-yes"
+                            onClick={async () => {
+                              try {
+                                await window.electronAPI.deactivateLicense();
+                                window.location.reload();
+                              } catch (err) {
+                                setShowDeactivateConfirm(false);
+                              }
+                            }}
+                          >
+                            {t('license.confirmYes')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

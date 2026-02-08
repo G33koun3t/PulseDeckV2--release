@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import useModuleConfig from '../hooks/useModuleConfig';
 import { useTranslation } from '../i18n';
+import appIcon from '../assets/app-icon.ico';
 import './Weather.css';
 
 const DEFAULT_WIDGETS = [
@@ -236,7 +237,7 @@ function WeatherModule() {
     return (
       <div className="weather-module">
         <div className="weather-loading">
-          <Sun size={48} className="spinning" />
+          <img src={appIcon} alt="" className="loading-app-icon" />
           <p>{t('weather.loadingWeather')}</p>
         </div>
       </div>

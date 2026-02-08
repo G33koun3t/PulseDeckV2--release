@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, screen, shell, net, dialog, clipboard, Notification, session, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell, net, dialog, clipboard, Notification, session, desktopCapturer, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const https = require('https');
 const si = require('systeminformation');
-const { exec, execFile } = require('child_process');
+const { exec, execFile, execFileSync } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -11,6 +12,8 @@ const loudness = require('loudness');
 const RSSParser = require('rss-parser');
 const { google } = require('googleapis');
 const licenseModule = require('./license');
+const guide = require('./guide');
+const { initUpdater, registerUpdaterIpc } = require('./updater');
 const speedTest = require('speedtest-net');
 
 
@@ -21,21 +24,61 @@ const rssParser = new RSSParser({
   },
   timeout: 10000,
   customFields: {
-    item: [['media:content', 'mediaContent'], ['media:thumbnail', 'mediaThumbnail']],
+    item: [
+      ['media:content', 'mediaContent'],
+      ['media:thumbnail', 'mediaThumbnail'],
+      ['media:group', 'mediaGroup'],
+    ],
   },
 });
 
-function extractImageFromContent(content) {
-  if (!content) return null;
-  const match = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+function extractImageFromHtml(html) {
+  if (!html) return null;
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
   return match ? match[1] : null;
 }
 
+function extractMediaUrl(obj) {
+  if (!obj) return null;
+  // Objet avec $ : { $: { url: '...' } }
+  if (obj.$?.url) return obj.$.url;
+  // Objet direct : { url: '...' }
+  if (obj.url) return obj.url;
+  // Tableau
+  if (Array.isArray(obj)) {
+    for (const el of obj) {
+      if (el?.$?.url) return el.$.url;
+      if (el?.url) return el.url;
+    }
+  }
+  return null;
+}
+
 function extractItemImage(item) {
+  // 1. Enclosure (standard RSS)
   if (item.enclosure?.url) return item.enclosure.url;
-  if (item.mediaContent?.$?.url) return item.mediaContent.$.url;
-  if (item.mediaThumbnail?.$?.url) return item.mediaThumbnail.$.url;
-  return extractImageFromContent(item.content || item['content:encoded']);
+  // 2. media:content (objet, tableau, ou string)
+  const mc = extractMediaUrl(item.mediaContent);
+  if (mc) return mc;
+  // 3. media:thumbnail
+  const mt = extractMediaUrl(item.mediaThumbnail);
+  if (mt) return mt;
+  // 4. media:group > media:content
+  const mg = item.mediaGroup;
+  if (mg) {
+    const mgUrl = extractMediaUrl(mg['media:content']) || extractMediaUrl(mg.mediaContent);
+    if (mgUrl) return mgUrl;
+  }
+  // 5. Chercher <img> dans content, content:encoded, description, summary
+  const htmlImage = extractImageFromHtml(item.content)
+    || extractImageFromHtml(item['content:encoded'])
+    || extractImageFromHtml(item.description)
+    || extractImageFromHtml(item.summary);
+  if (htmlImage) return htmlImage;
+  // 6. Dernier recours : chercher une URL d'image dans tout le JSON de l'item
+  const raw = JSON.stringify(item);
+  const imgMatch = raw.match(/https?:\/\/[^"'\s]+\.(?:jpg|jpeg|png|webp)(?:\?[^"'\s]*)?/i);
+  return imgMatch ? imgMatch[0] : null;
 }
 
 // Résolution des chemins : dev vs production (asar)
@@ -264,6 +307,55 @@ async function getNetworkDrives() {
 
 let mainWindow;
 let monitoringWorker = null;
+let ogWorker = null;
+let ogRequestId = 0;
+const ogPendingRequests = new Map();
+
+function startOgWorker() {
+  const { Worker } = require('worker_threads');
+  const workerPath = path.join(__dirname, 'og-worker.js');
+  ogWorker = new Worker(workerPath);
+
+  ogWorker.on('message', (msg) => {
+    if (msg.type === 'og-results' && ogPendingRequests.has(msg.id)) {
+      ogPendingRequests.get(msg.id)(msg.results);
+      ogPendingRequests.delete(msg.id);
+    }
+  });
+
+  ogWorker.on('error', (err) => {
+    console.error('[OG Worker] Error:', err.message);
+  });
+
+  ogWorker.on('exit', (code) => {
+    if (code !== 0) {
+      console.log(`[OG Worker] Exited with code ${code}, restarting...`);
+      setTimeout(startOgWorker, 1000);
+    }
+  });
+}
+
+function fetchOgImages(urls) {
+  return new Promise((resolve) => {
+    if (!ogWorker) {
+      resolve([]);
+      return;
+    }
+    const id = ++ogRequestId;
+    // Timeout 15s au cas où le worker ne répond pas
+    const timeout = setTimeout(() => {
+      ogPendingRequests.delete(id);
+      resolve([]);
+    }, 15000);
+
+    ogPendingRequests.set(id, (results) => {
+      clearTimeout(timeout);
+      resolve(results);
+    });
+
+    ogWorker.postMessage({ type: 'fetch-og-images', id, urls });
+  });
+}
 
 function startMonitoringWorker() {
   const { fork } = require('child_process');
@@ -326,43 +418,129 @@ function stopMonitoringWorker() {
   }
 }
 
-function createWindow() {
-  // Trouver l'écran Corsair Xeneon Edge (2560x720)
-  const displays = screen.getAllDisplays();
-  const xeneonDisplay = displays.find(d => d.size.width === 2560 && d.size.height === 720);
+// Fichier de préférences écran
+function getDisplaySettingsPath() {
+  return path.join(app.getPath('userData'), 'display-settings.json');
+}
 
-  // Si l'écran Xeneon n'est pas trouvé, utiliser l'écran principal
-  const targetDisplay = xeneonDisplay || screen.getPrimaryDisplay();
+function loadDisplaySettings() {
+  try {
+    const data = fs.readFileSync(getDisplaySettingsPath(), 'utf8');
+    return JSON.parse(data);
+  } catch { return {}; }
+}
+
+function saveDisplaySettings(settings) {
+  fs.writeFileSync(getDisplaySettingsPath(), JSON.stringify(settings, null, 2));
+}
+
+function findTargetDisplay() {
+  const displays = screen.getAllDisplays();
+  const prefs = loadDisplaySettings();
+
+  // 1. Écran sauvegardé par l'utilisateur (par ID)
+  if (prefs.displayId) {
+    const saved = displays.find(d => d.id === prefs.displayId);
+    if (saved) return saved;
+  }
+
+  // 2. Détection auto : chercher un écran secondaire tactile/bar (ultra-wide court)
+  const secondary = displays.find(d => {
+    const primary = screen.getPrimaryDisplay();
+    if (d.id === primary.id) return false;
+    // Écrans bar : ratio largeur/hauteur > 2.5 (ex: 2560x720=3.56, 1920x480=4.0)
+    const ratio = d.size.width / d.size.height;
+    return ratio > 2.5;
+  });
+  if (secondary) return secondary;
+
+  // 3. Tout écran secondaire (non-primaire)
+  const anySecondary = displays.find(d => d.id !== screen.getPrimaryDisplay().id);
+  if (anySecondary) return anySecondary;
+
+  // 4. Écran principal par défaut
+  return screen.getPrimaryDisplay();
+}
+
+function createWindow() {
+  const displays = screen.getAllDisplays();
+  const targetDisplay = findTargetDisplay();
+  const isBarScreen = (targetDisplay.size.width / targetDisplay.size.height) > 2.5;
 
   console.log('Écrans disponibles:', displays.map(d => `${d.size.width}x${d.size.height} @ (${d.bounds.x}, ${d.bounds.y})`));
   console.log('Écran cible:', `${targetDisplay.size.width}x${targetDisplay.size.height} @ (${targetDisplay.bounds.x}, ${targetDisplay.bounds.y})`);
 
-  // Adapter la taille à l'écran détecté
-  const workArea = targetDisplay.workArea; // Zone sans la barre des tâches
-  const appWidth = xeneonDisplay ? 2560 : workArea.width;
-  const appHeight = xeneonDisplay ? 680 : workArea.height;
+  // Adapter la taille à l'écran détecté (workArea = zone sans barre des tâches)
+  // Si auto-hide: workArea == bounds → détecter la position de la taskbar et réserver l'espace
+  const TASKBAR_RESERVE = 40;
 
-  // Position sur l'écran cible
-  const windowX = xeneonDisplay ? targetDisplay.bounds.x : workArea.x;
-  const windowY = xeneonDisplay ? targetDisplay.bounds.y : workArea.y;
+  // Détecter le côté de la barre des tâches via l'API Windows (0=gauche, 1=haut, 2=droite, 3=bas)
+  let taskbarEdge = 3; // défaut: bas
+  try {
+    const ps = ['-NoProfile', '-Command', `
+      Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;
+      public class TBH{
+        [DllImport("shell32.dll")]public static extern uint SHAppBarMessage(uint m,ref ABD d);
+        [StructLayout(LayoutKind.Sequential)]public struct ABD{public int s;public IntPtr h;public uint c;public uint e;public int l,t,r,b;public IntPtr p;}
+        public static uint E(){var d=new ABD();d.s=Marshal.SizeOf(typeof(ABD));SHAppBarMessage(5,ref d);return d.e;}
+      }' -Language CSharp; [TBH]::E()`
+    ];
+    const result = execFileSync('powershell', ps, { encoding: 'utf8', timeout: 5000 }).trim();
+    taskbarEdge = parseInt(result) || 3;
+  } catch { /* défaut: bas */ }
+
+  const getAppBounds = (display) => {
+    const wa = display.workArea;
+    const b = display.bounds;
+    const autoHide = (wa.x === b.x && wa.y === b.y && wa.width === b.width && wa.height === b.height);
+    if (!autoHide) {
+      return { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
+    }
+    // Auto-hide: réserver l'espace selon le côté de la taskbar
+    switch (taskbarEdge) {
+      case 0: return { x: b.x + TASKBAR_RESERVE, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; // gauche
+      case 1: return { x: b.x, y: b.y + TASKBAR_RESERVE, width: b.width, height: b.height - TASKBAR_RESERVE }; // haut
+      case 2: return { x: b.x, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height };                   // droite
+      default: return { x: b.x, y: b.y, width: b.width, height: b.height - TASKBAR_RESERVE };                   // bas
+    }
+  };
+
+  const appBounds = getAppBounds(targetDisplay);
 
   mainWindow = new BrowserWindow({
-    width: appWidth,
-    height: appHeight,
-    x: windowX,
-    y: windowY,
+    width: appBounds.width,
+    height: appBounds.height,
+    x: appBounds.x,
+    y: appBounds.y,
     frame: false,
     transparent: false,
-    resizable: !xeneonDisplay,
+    resizable: !isBarScreen,
     alwaysOnTop: false,
     skipTaskbar: false,
-    icon: path.join(__dirname, '../../monitoring.ico'),
+    icon: app.isPackaged
+      ? path.join(process.resourcesPath, 'monitoring.ico')
+      : path.join(__dirname, '../../monitoring.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
     },
+  });
+
+  // Handler du protocole local-file:// pour charger les fichiers locaux
+  protocol.handle('local-file', (request) => {
+    const filePath = decodeURIComponent(new URL(request.url).pathname);
+    return net.fetch(`file://${filePath}`);
+  });
+
+  // Réajuster la fenêtre quand la barre des tâches est cachée/affichée
+  screen.on('display-metrics-changed', (_event, display, changedMetrics) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (!changedMetrics.includes('workArea')) return;
+    if (display.id !== targetDisplay.id) return;
+    const bounds = getAppBounds(display);
+    mainWindow.setBounds(bounds);
   });
 
   // Auto-grant system audio loopback pour le visualiseur audio
@@ -831,22 +1009,60 @@ function registerIpcHandlers() {
   ipcMain.handle('fetch-rss', async (event, feedUrl) => {
     try {
       const feed = await rssParser.parseURL(feedUrl);
-      return {
-        success: true,
-        feed: {
-          title: feed.title,
-          items: feed.items.slice(0, 20).map(item => ({
-            title: item.title,
-            link: item.link,
-            date: item.pubDate || item.isoDate,
-            summary: item.contentSnippet || item.content?.substring(0, 200),
-            image: extractItemImage(item),
-          }))
+      const items = feed.items.slice(0, 20).map(item => ({
+        title: item.title,
+        link: item.link,
+        date: item.pubDate || item.isoDate,
+        summary: item.contentSnippet || item.content?.substring(0, 200),
+        image: extractItemImage(item),
+      }));
+
+      // Fallback og:image via worker thread (non-bloquant pour le thread principal)
+      const noImage = items.filter(i => !i.image && i.link);
+      if (noImage.length > 0) {
+        const urls = noImage.slice(0, 10).map(i => i.link);
+        const ogResults = await fetchOgImages(urls);
+        const ogMap = new Map(ogResults.filter(r => r.og).map(r => [r.link, r.og]));
+        for (const item of items) {
+          if (!item.image && ogMap.has(item.link)) {
+            item.image = ogMap.get(item.link);
+          }
         }
-      };
+      }
+
+      return { success: true, feed: { title: feed.title, items } };
     } catch (error) {
       console.error(`[RSS] Erreur pour ${feedUrl}:`, error.message);
       return { success: false, error: error.message };
+    }
+  });
+
+  // Crypto - Prix via CoinGecko API (gratuit, sans clé)
+  ipcMain.handle('fetch-crypto-prices', async () => {
+    const ids = 'bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,avalanche-2,polkadot,matic-network';
+    const currencies = 'eur,usd,pln,jpy';
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=${currencies}&include_24hr_change=true`;
+    try {
+      const resp = await net.fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        },
+      });
+      if (!resp.ok) {
+        console.error('[Crypto] HTTP', resp.status, resp.statusText);
+        return { success: false, error: `HTTP ${resp.status}` };
+      }
+      const data = await resp.json();
+      // Vérifier que la réponse contient bien des prix (pas une erreur CoinGecko)
+      if (data.bitcoin || data.ethereum) {
+        return { success: true, data };
+      }
+      console.error('[Crypto] Réponse inattendue:', JSON.stringify(data).substring(0, 200));
+      return { success: false, error: 'Unexpected response' };
+    } catch (err) {
+      console.error('[Crypto] Erreur:', err.message);
+      return { success: false, error: err.message };
     }
   });
 
@@ -1088,7 +1304,10 @@ function registerIpcHandlers() {
   // Speedtest
   ipcMain.handle('run-speedtest', async () => {
     try {
-      const result = await speedTest({ acceptLicense: true, acceptGdpr: true });
+      const cancel = speedTest.makeCancel();
+      const timeout = setTimeout(() => cancel(), 60000);
+      const result = await speedTest({ acceptLicense: true, acceptGdpr: true, cancel });
+      clearTimeout(timeout);
       return {
         success: true,
         data: {
@@ -1125,15 +1344,43 @@ function registerIpcHandlers() {
     return result.filePaths[0];
   });
 
-  ipcMain.handle('take-screenshot', async (_event, folderPath) => {
+  // Lister les écrans disponibles (avec preview thumbnail)
+  ipcMain.handle('get-screens', async () => {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
-        thumbnailSize: { width: 2560, height: 1440 },
+        thumbnailSize: { width: 320, height: 180 },
+      });
+      const displays = screen.getAllDisplays();
+      return {
+        success: true,
+        screens: sources.map((src, i) => {
+          const display = displays[i];
+          return {
+            id: src.id,
+            name: src.name,
+            thumbnail: src.thumbnail.toDataURL(),
+            width: display?.size?.width || 0,
+            height: display?.size?.height || 0,
+          };
+        }),
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('take-screenshot', async (_event, folderPath, sourceId) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 3840, height: 2160 },
       });
       if (!sources.length) return { success: false, error: 'No screen source' };
 
-      const source = sources[0];
+      const source = sourceId
+        ? sources.find(s => s.id === sourceId) || sources[0]
+        : sources[0];
       const image = source.thumbnail;
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `screenshot_${timestamp}.png`;
@@ -1195,18 +1442,108 @@ function registerIpcHandlers() {
     }
   });
 
+  // Guide utilisateur PDF
+  ipcMain.handle('open-guide', async (_event, lang) => {
+    try {
+      return await guide.generateAndOpenPDF(lang || 'fr');
+    } catch (error) {
+      console.error('Erreur génération guide:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Gestion des écrans / displays
+  ipcMain.handle('get-displays', () => {
+    const displays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    const prefs = loadDisplaySettings();
+    const currentId = mainWindow && !mainWindow.isDestroyed()
+      ? screen.getDisplayMatching(mainWindow.getBounds()).id
+      : primary.id;
+
+    return displays.map(d => ({
+      id: d.id,
+      label: `${d.size.width}x${d.size.height}`,
+      width: d.size.width,
+      height: d.size.height,
+      isPrimary: d.id === primary.id,
+      isCurrent: d.id === currentId,
+      isSaved: d.id === prefs.displayId,
+      scaleFactor: d.scaleFactor,
+      bounds: d.bounds,
+    }));
+  });
+
+  ipcMain.handle('set-target-display', (_event, displayId) => {
+    const displays = screen.getAllDisplays();
+    const target = displays.find(d => d.id === displayId);
+    if (!target) return { success: false, error: 'Display not found' };
+
+    // Sauvegarder la préférence
+    saveDisplaySettings({ displayId });
+
+    // Déplacer la fenêtre vers le nouvel écran
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const TASKBAR_RESERVE = 40;
+      let taskbarEdge = 3;
+      try {
+        const ps = ['-NoProfile', '-Command', `
+          Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;
+          public class TBH2{
+            [DllImport("shell32.dll")]public static extern uint SHAppBarMessage(uint m,ref ABD d);
+            [StructLayout(LayoutKind.Sequential)]public struct ABD{public int s;public IntPtr h;public uint c;public uint e;public int l,t,r,b;public IntPtr p;}
+            public static uint E(){var d=new ABD();d.s=Marshal.SizeOf(typeof(ABD));SHAppBarMessage(5,ref d);return d.e;}
+          }' -Language CSharp; [TBH2]::E()`
+        ];
+        const result = execFileSync('powershell', ps, { encoding: 'utf8', timeout: 5000 }).trim();
+        taskbarEdge = parseInt(result) || 3;
+      } catch { /* défaut: bas */ }
+
+      const wa = target.workArea;
+      const b = target.bounds;
+      const autoHide = (wa.x === b.x && wa.y === b.y && wa.width === b.width && wa.height === b.height);
+      let appBounds;
+      if (!autoHide) {
+        appBounds = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
+      } else {
+        switch (taskbarEdge) {
+          case 0: appBounds = { x: b.x + TASKBAR_RESERVE, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; break;
+          case 1: appBounds = { x: b.x, y: b.y + TASKBAR_RESERVE, width: b.width, height: b.height - TASKBAR_RESERVE }; break;
+          case 2: appBounds = { x: b.x, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; break;
+          default: appBounds = { x: b.x, y: b.y, width: b.width, height: b.height - TASKBAR_RESERVE };
+        }
+      }
+
+      const isBarScreen = (target.size.width / target.size.height) > 2.5;
+      mainWindow.setResizable(true);
+      mainWindow.setBounds(appBounds);
+      mainWindow.setResizable(!isBarScreen);
+    }
+
+    return { success: true };
+  });
+
 }
+
+// Protocole personnalisé pour charger les fichiers locaux (previews screenshots, etc.)
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'local-file', privileges: { bypassCSP: true, stream: true, supportFetchAPI: true } }
+]);
 
 app.whenReady().then(() => {
 
   initOAuth2Client();
+  registerUpdaterIpc();
   registerIpcHandlers();
   createWindow();
+  initUpdater(mainWindow);
   startMonitoringWorker();
+  startOgWorker();
 });
 
 app.on('window-all-closed', () => {
   stopMonitoringWorker();
+  if (ogWorker) { ogWorker.terminate(); ogWorker = null; }
   if (process.platform !== 'darwin') {
     app.quit();
   }
