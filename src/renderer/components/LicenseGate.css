@@ -1,0 +1,129 @@
+.license-gate {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary, #0a0a0f);
+}
+
+.license-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.license-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-secondary, #12121a);
+  border: 1px solid var(--border-color, #2a2a3a);
+  border-radius: 20px;
+  padding: 48px 56px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.license-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: var(--accent-primary, #6366f1);
+  color: white;
+  margin-bottom: 24px;
+}
+
+.license-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary, #e4e4e7);
+  margin: 0 0 8px;
+}
+
+.license-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary, #71717a);
+  margin: 0 0 32px;
+}
+
+.license-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.license-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-tertiary, #1a1a2e);
+  border: 1px solid var(--border-color, #2a2a3a);
+  border-radius: 12px;
+  color: var(--text-primary, #e4e4e7);
+  font-size: 17px;
+  font-family: monospace;
+  letter-spacing: 1px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.license-input:focus {
+  border-color: var(--accent-primary, #6366f1);
+}
+
+.license-input::placeholder {
+  color: var(--text-muted, #52525b);
+  letter-spacing: 2px;
+}
+
+.license-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: var(--accent-primary, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.license-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.license-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.license-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #ef4444;
+  font-size: 15px;
+}
+
+.license-spinner {
+  animation: license-spin 1s linear infinite;
+}
+
+@keyframes license-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

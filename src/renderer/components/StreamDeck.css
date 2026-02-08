@@ -1,0 +1,630 @@
+/* Stream Deck Panel */
+.streamdeck-panel {
+  width: var(--streamdeck-width);
+  height: 100%;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+/* Header */
+.streamdeck-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.streamdeck-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.streamdeck-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.streamdeck-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.streamdeck-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.streamdeck-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.streamdeck-edit-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.streamdeck-edit-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+/* Grid */
+.streamdeck-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  flex: 1;
+  align-content: start;
+}
+
+/* Button */
+.streamdeck-button {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  padding: 6px;
+  position: relative;
+}
+
+.streamdeck-button:hover {
+  transform: scale(1.05);
+  border-color: var(--accent-primary);
+  z-index: 2;
+}
+
+.streamdeck-button:active {
+  transform: scale(0.95);
+}
+
+.streamdeck-button.edit-mode {
+  border-style: solid;
+}
+
+.streamdeck-button.edit-mode:hover {
+  border-color: var(--warning);
+}
+
+/* Empty slot (edit mode) */
+.streamdeck-button.empty {
+  border-style: dashed;
+  border-color: var(--border-color);
+  opacity: 0.4;
+  color: var(--text-muted);
+}
+
+.streamdeck-button.empty:hover {
+  opacity: 0.7;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Hidden empty slot (normal mode) */
+.streamdeck-slot-hidden {
+  aspect-ratio: 1;
+}
+
+/* Button image */
+.streamdeck-button-img {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: contain;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.streamdeck-button-placeholder {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-hover);
+  border-radius: 10px;
+}
+
+/* Button name */
+.streamdeck-button-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+/* Edit badge on button */
+.streamdeck-button-edit-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  background: var(--warning);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Modal Overlay */
+.streamdeck-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal */
+.streamdeck-modal {
+  width: 420px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.streamdeck-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.streamdeck-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.streamdeck-modal-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Modal Body */
+.streamdeck-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Preview */
+.streamdeck-preview {
+  display: flex;
+  justify-content: center;
+}
+
+.streamdeck-preview-button {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.streamdeck-preview-button:hover {
+  border-color: var(--accent-primary);
+}
+
+.streamdeck-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.streamdeck-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.streamdeck-preview-empty span {
+  font-size: 13px;
+}
+
+/* Form */
+.streamdeck-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.streamdeck-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.streamdeck-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.streamdeck-field input {
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.streamdeck-field input:focus {
+  border-color: var(--accent-primary);
+}
+
+.streamdeck-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.streamdeck-field-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Modal Footer */
+.streamdeck-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.streamdeck-modal-spacer {
+  flex: 1;
+}
+
+/* Buttons */
+.streamdeck-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.streamdeck-btn.primary {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.streamdeck-btn.primary:hover {
+  opacity: 0.9;
+}
+
+.streamdeck-btn.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.streamdeck-btn.secondary:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.streamdeck-btn.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.streamdeck-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Type Selector (pilules) */
+.streamdeck-type-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.streamdeck-type-selector label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.streamdeck-type-options {
+  display: flex;
+  gap: 6px;
+}
+
+.streamdeck-type-option {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.streamdeck-type-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.streamdeck-type-option.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* System Action List (radio style) */
+.streamdeck-system-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.streamdeck-system-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.streamdeck-system-action-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.streamdeck-system-action-item.active {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.streamdeck-system-action-item span:first-of-type {
+  flex: 1;
+}
+
+.streamdeck-dangerous-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* System icon in grid button */
+.streamdeck-button-system-icon {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+}
+
+/* Profile Actions (editable list) */
+.streamdeck-profile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.streamdeck-profile-action-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.streamdeck-profile-action-row input {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.streamdeck-profile-action-row input:focus {
+  border-color: var(--accent-primary);
+}
+
+.streamdeck-profile-action-row input::placeholder {
+  color: var(--text-muted);
+}
+
+.streamdeck-profile-action-remove {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.streamdeck-profile-action-remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.streamdeck-profile-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: none;
+  border: 1px dashed var(--border-color);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.streamdeck-profile-add-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Confirmation Overlay */
+.streamdeck-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.streamdeck-confirm-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+}
+
+.streamdeck-confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.streamdeck-confirm-text {
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.streamdeck-confirm-action-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--danger);
+  margin-bottom: 24px;
+}
+
+.streamdeck-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
