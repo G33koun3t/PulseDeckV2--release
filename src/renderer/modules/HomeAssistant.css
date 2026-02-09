@@ -314,8 +314,8 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 20px;
-  max-width: 450px;
+  padding: 24px;
+  width: 50%;
   margin: auto;
   max-height: 100%;
   overflow-y: auto;

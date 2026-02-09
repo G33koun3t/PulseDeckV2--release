@@ -266,13 +266,13 @@ function WeatherModule() {
         </div>
         <div className="weather-actions">
           <button className="action-btn" onClick={fetchWeather} title={t('common.refresh')}>
-            <RefreshCw size={16} />
+            <RefreshCw size={22} />
           </button>
           <button className="action-btn" onClick={() => {
             setTempCity(city);
             setShowSettings(true);
           }} title={t('common.settings')}>
-            <Settings size={16} />
+            <Settings size={22} />
           </button>
         </div>
       </div>

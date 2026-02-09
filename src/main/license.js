@@ -13,6 +13,8 @@ const PRODUCT_PERMALINK = 'PulseDeck';
 
 const LICENSE_FILE = 'license.json';
 const GRACE_PERIOD_DAYS = 7;
+// Fingerprint machine du développeur — bypass licence
+const DEV_FINGERPRINT = '8f773435aa4134de9ef18b79133a1ff30ce2bdb952458dd9b1fa75070a1db46d';
 
 function getLicensePath() {
   return path.join(app.getPath('userData'), LICENSE_FILE);
@@ -70,6 +72,12 @@ async function checkLicense() {
     return { valid: false, reason: 'no_license' };
   }
 
+  // Machine développeur — bypass API
+  const currentFp = await generateFingerprint();
+  if (currentFp === DEV_FINGERPRINT) {
+    return { valid: true, license };
+  }
+
   // Vérifier que le fingerprint correspond à cette machine
   const currentFingerprint = await generateFingerprint();
   if (license.fingerprint !== currentFingerprint) {
@@ -110,6 +118,13 @@ async function checkLicense() {
 
 // Activer une clé de licence
 async function activate(key) {
+  // Machine développeur — bypass API
+  const devFp = await generateFingerprint();
+  if (devFp === DEV_FINGERPRINT) {
+    saveLicense({ key, fingerprint: devFp, lastValidated: new Date().toISOString(), activatedAt: new Date().toISOString() });
+    return { success: true };
+  }
+
   let result;
   try {
     // Incrémenter les uses pour compter l'activation

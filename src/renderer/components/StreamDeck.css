@@ -75,12 +75,32 @@
   color: white;
 }
 
+/* Grid wrapper (scroll container) */
+.streamdeck-grid-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.streamdeck-grid-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.streamdeck-grid-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.streamdeck-grid-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 /* Grid */
 .streamdeck-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  flex: 1;
+  gap: 4px;
   align-content: start;
 }
 

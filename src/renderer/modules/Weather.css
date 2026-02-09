@@ -32,22 +32,22 @@
   gap: 8px;
 }
 
-.action-btn {
+.weather-module .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--bg-secondary);
+  width: 44px;
+  height: 44px;
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.action-btn:hover {
-  background: var(--bg-tertiary);
+.weather-module .action-btn:hover {
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 

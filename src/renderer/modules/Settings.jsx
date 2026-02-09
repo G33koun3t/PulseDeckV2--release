@@ -657,8 +657,8 @@ function SettingsModule() {
                 <span className="stepper-value">{settings.layout.gridRows}</span>
                 <button
                   className="stepper-btn"
-                  onClick={() => settings.layout.gridRows < (isFreeMode ? 4 : 5) && handleLayoutChange('gridRows', settings.layout.gridRows + 1)}
-                  disabled={settings.layout.gridRows >= (isFreeMode ? 4 : 5)}
+                  onClick={() => settings.layout.gridRows < (isFreeMode ? 4 : 12) && handleLayoutChange('gridRows', settings.layout.gridRows + 1)}
+                  disabled={settings.layout.gridRows >= (isFreeMode ? 4 : 12)}
                 >+</button>
               </div>
             </div>

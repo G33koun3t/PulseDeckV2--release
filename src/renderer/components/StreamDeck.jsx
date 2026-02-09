@@ -301,6 +301,7 @@ function StreamDeck() {
       </div>
 
       {/* Grille */}
+      <div className="streamdeck-grid-wrapper">
       <div className="streamdeck-grid" style={{ gridTemplateColumns: `repeat(${effectiveGrid.columns}, 1fr)` }}>
         {grid.map((button, index) => {
           if (button) {
@@ -337,6 +338,7 @@ function StreamDeck() {
 
           return <div key={`empty-${index}`} className="streamdeck-slot-hidden" />;
         })}
+      </div>
       </div>
 
       {/* Modal d'édition */}

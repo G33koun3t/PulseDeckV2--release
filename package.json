@@ -67,6 +67,7 @@
       "icon": "monitoring.ico",
       "signAndEditExecutable": false
     },
+    "afterPack": "./scripts/afterPack.js",
     "nsis": {
       "oneClick": false,
       "perMachine": false,
