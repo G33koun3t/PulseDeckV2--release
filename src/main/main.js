@@ -514,6 +514,23 @@ function createWindow() {
     mainWindow.setBounds(bounds);
   });
 
+  // CSP appliquée depuis le main process (plus fiable qu'un meta tag en mode file://)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';" +
+          " script-src 'self' 'unsafe-inline';" +
+          " style-src 'self' 'unsafe-inline';" +
+          " img-src 'self' data: https: file:;" +
+          " media-src 'self' mediastream: blob:;" +
+          " connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com ws://localhost:* ws://127.0.0.1:*;"
+        ],
+      },
+    });
+  });
+
   // Auto-grant system audio loopback pour le visualiseur audio
   session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
     desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
