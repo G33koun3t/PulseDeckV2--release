@@ -9,7 +9,7 @@ const { machineId } = require('node-machine-id');
 // Un seul endpoint verify, pas d'activate/deactivate séparés
 // ============================================================
 const GUMROAD_API = 'https://api.gumroad.com/v2/licenses/verify';
-const PRODUCT_PERMALINK = 'PulseDeck';
+const PRODUCT_ID = 'jyhdsJJ2ecjsN1uboNatRw==';
 
 const LICENSE_FILE = 'license.json';
 const GRACE_PERIOD_DAYS = 7;
@@ -51,7 +51,7 @@ function deleteLicense() {
 // Appeler l'API Gumroad verify
 async function verifyOnApi(key, incrementUses = false) {
   const params = new URLSearchParams();
-  params.append('product_permalink', PRODUCT_PERMALINK);
+  params.append('product_id', PRODUCT_ID);
   params.append('license_key', key);
   params.append('increment_uses_count', incrementUses ? 'true' : 'false');
 
