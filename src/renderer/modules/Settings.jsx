@@ -110,6 +110,7 @@ function SettingsModule() {
   const [updateStatus, setUpdateStatus] = useState(null);
   const [updateVersion, setUpdateVersion] = useState('');
   const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateError, setUpdateError] = useState('');
   const [appVersion, setAppVersion] = useState('');
 
   // Charger les infos de licence + auto-start au montage
@@ -135,6 +136,7 @@ function SettingsModule() {
         setUpdateStatus(data.status);
         if (data.version) setUpdateVersion(data.version);
         if (data.percent != null) setUpdateProgress(data.percent);
+        if (data.error) setUpdateError(data.error);
       });
     }
   }, []);
@@ -762,7 +764,7 @@ function SettingsModule() {
           {updateStatus === 'error' && (
             <div className="update-status-banner error">
               <AlertCircle size={16} />
-              <span>{t('updates.error')}</span>
+              <span>{t('updates.error')}{updateError ? ` : ${updateError}` : ''}</span>
             </div>
           )}
 

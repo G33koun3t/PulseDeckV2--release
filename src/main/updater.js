@@ -9,6 +9,7 @@ function initUpdater(win) {
   // Config
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.forceCodeSigning = false;
 
   // En dev, ne pas vérifier les mises à jour
   if (process.env.NODE_ENV === 'development') {

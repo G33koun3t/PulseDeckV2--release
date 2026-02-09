@@ -6,7 +6,7 @@
   border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 6px 12px;
   flex-shrink: 0;
 }
 
@@ -15,11 +15,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .streamdeck-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
