@@ -470,39 +470,10 @@ function createWindow() {
   console.log('Écrans disponibles:', displays.map(d => `${d.size.width}x${d.size.height} @ (${d.bounds.x}, ${d.bounds.y})`));
   console.log('Écran cible:', `${targetDisplay.size.width}x${targetDisplay.size.height} @ (${targetDisplay.bounds.x}, ${targetDisplay.bounds.y})`);
 
-  // Adapter la taille à l'écran détecté (workArea = zone sans barre des tâches)
-  // Si auto-hide: workArea == bounds → détecter la position de la taskbar et réserver l'espace
-  const TASKBAR_RESERVE = 40;
-
-  // Détecter le côté de la barre des tâches via l'API Windows (0=gauche, 1=haut, 2=droite, 3=bas)
-  let taskbarEdge = 3; // défaut: bas
-  try {
-    const ps = ['-NoProfile', '-Command', `
-      Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;
-      public class TBH{
-        [DllImport("shell32.dll")]public static extern uint SHAppBarMessage(uint m,ref ABD d);
-        [StructLayout(LayoutKind.Sequential)]public struct ABD{public int s;public IntPtr h;public uint c;public uint e;public int l,t,r,b;public IntPtr p;}
-        public static uint E(){var d=new ABD();d.s=Marshal.SizeOf(typeof(ABD));SHAppBarMessage(5,ref d);return d.e;}
-      }' -Language CSharp; [TBH]::E()`
-    ];
-    const result = execFileSync('powershell', ps, { encoding: 'utf8', timeout: 5000 }).trim();
-    taskbarEdge = parseInt(result) || 3;
-  } catch { /* défaut: bas */ }
-
+  // Utiliser toute la surface de l'écran (ignorer la barre des tâches)
   const getAppBounds = (display) => {
-    const wa = display.workArea;
     const b = display.bounds;
-    const autoHide = (wa.x === b.x && wa.y === b.y && wa.width === b.width && wa.height === b.height);
-    if (!autoHide) {
-      return { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
-    }
-    // Auto-hide: réserver l'espace selon le côté de la taskbar
-    switch (taskbarEdge) {
-      case 0: return { x: b.x + TASKBAR_RESERVE, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; // gauche
-      case 1: return { x: b.x, y: b.y + TASKBAR_RESERVE, width: b.width, height: b.height - TASKBAR_RESERVE }; // haut
-      case 2: return { x: b.x, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height };                   // droite
-      default: return { x: b.x, y: b.y, width: b.width, height: b.height - TASKBAR_RESERVE };                   // bas
-    }
+    return { x: b.x, y: b.y, width: b.width, height: b.height };
   };
 
   const appBounds = getAppBounds(targetDisplay);
@@ -1482,41 +1453,12 @@ function registerIpcHandlers() {
     // Sauvegarder la préférence
     saveDisplaySettings({ displayId });
 
-    // Déplacer la fenêtre vers le nouvel écran
+    // Déplacer la fenêtre vers le nouvel écran (toute la surface)
     if (mainWindow && !mainWindow.isDestroyed()) {
-      const TASKBAR_RESERVE = 40;
-      let taskbarEdge = 3;
-      try {
-        const ps = ['-NoProfile', '-Command', `
-          Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;
-          public class TBH2{
-            [DllImport("shell32.dll")]public static extern uint SHAppBarMessage(uint m,ref ABD d);
-            [StructLayout(LayoutKind.Sequential)]public struct ABD{public int s;public IntPtr h;public uint c;public uint e;public int l,t,r,b;public IntPtr p;}
-            public static uint E(){var d=new ABD();d.s=Marshal.SizeOf(typeof(ABD));SHAppBarMessage(5,ref d);return d.e;}
-          }' -Language CSharp; [TBH2]::E()`
-        ];
-        const result = execFileSync('powershell', ps, { encoding: 'utf8', timeout: 5000 }).trim();
-        taskbarEdge = parseInt(result) || 3;
-      } catch { /* défaut: bas */ }
-
-      const wa = target.workArea;
       const b = target.bounds;
-      const autoHide = (wa.x === b.x && wa.y === b.y && wa.width === b.width && wa.height === b.height);
-      let appBounds;
-      if (!autoHide) {
-        appBounds = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
-      } else {
-        switch (taskbarEdge) {
-          case 0: appBounds = { x: b.x + TASKBAR_RESERVE, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; break;
-          case 1: appBounds = { x: b.x, y: b.y + TASKBAR_RESERVE, width: b.width, height: b.height - TASKBAR_RESERVE }; break;
-          case 2: appBounds = { x: b.x, y: b.y, width: b.width - TASKBAR_RESERVE, height: b.height }; break;
-          default: appBounds = { x: b.x, y: b.y, width: b.width, height: b.height - TASKBAR_RESERVE };
-        }
-      }
-
       const isBarScreen = (target.size.width / target.size.height) > 2.5;
       mainWindow.setResizable(true);
-      mainWindow.setBounds(appBounds);
+      mainWindow.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
       mainWindow.setResizable(!isBarScreen);
     }
 
