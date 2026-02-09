@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import StreamDeck from './components/StreamDeck';
 import MonitoringModule from './modules/Monitoring';
 import WeatherModule from './modules/Weather';
-import CalendarModule from './modules/Calendar';
+// import CalendarModule from './modules/Calendar'; // Désactivé en attendant validation Google
 import HomeAssistantModule from './modules/HomeAssistant';
 import VolumeModule from './modules/Volume';
 import OutilsModule from './modules/Outils';
@@ -19,7 +19,7 @@ import { useLicense } from './contexts/LicenseContext';
 const modules = {
   monitoring: { component: MonitoringModule, name: 'Monitoring' },
   weather: { component: WeatherModule, name: 'Météo' },
-  calendar: { component: CalendarModule, name: 'Calendrier' },
+  // calendar: { component: CalendarModule, name: 'Calendrier' }, // Désactivé en attendant validation Google
   homeassistant: { component: HomeAssistantModule, name: 'Home Assistant' },
   volume: { component: VolumeModule, name: 'Volume' },
   news: { component: NewsModule, name: 'Actualités' },
