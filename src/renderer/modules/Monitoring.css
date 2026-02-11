@@ -790,3 +790,223 @@
   font-size: 12px;
   color: #ea4335;
 }
+
+/* ===== PRESENTATION MODE SELECTOR ===== */
+/* ===== WIDGET COLORS SECTION ===== */
+.colors-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.colors-section .msp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colors-reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.colors-reset-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.colors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.color-picker-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.color-picker-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.color-input-wrap {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+}
+
+.color-input-wrap input[type="color"] {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ===== LARGE GAUGE (shared) ===== */
+.large-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.large-gauge svg {
+  display: block;
+}
+
+.large-gauge-fill {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.large-gauge-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.large-gauge-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.large-gauge-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.large-gauge-sublabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== HORIZONTAL BAR (shared) ===== */
+.hbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.hbar-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 60px;
+}
+
+.hbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.hbar-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hbar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.hbar-value {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ===== SEMI-CIRCULAR GAUGE ===== */
+.semi-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.semi-gauge-fill {
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.semi-gauge-info {
+  margin-top: -34px;
+  text-align: center;
+}
+
+.semi-gauge-value {
+  font-size: 34px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.semi-gauge-unit {
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+.semi-gauge-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+

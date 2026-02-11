@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Cpu, MemoryStick, HardDrive, Thermometer, Activity, Network, Monitor, Settings, ArrowDown, ArrowUp, Wifi, Gauge, Zap, Clock, Bell, BellOff, Play, Loader, Gamepad2 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-} from 'recharts';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Cpu, MemoryStick, HardDrive, Thermometer, Network, Monitor, Settings, Wifi, Gauge, Zap, Bell, BellOff, Gamepad2, RotateCcw } from 'lucide-react';
 import useModuleConfig from '../hooks/useModuleConfig';
 import ModuleSettingsPanel from '../components/ModuleSettingsPanel';
 import { useTranslation } from '../i18n';
 import { useLicense } from '../contexts/LicenseContext';
 import appIcon from '../assets/app-icon.ico';
+import { DEFAULT_WIDGET_COLORS } from './monitoring/shared';
+import * as CurvesMode from './monitoring/CurvesMode';
 import './Monitoring.css';
 
 const DEFAULT_WIDGETS = [
@@ -34,135 +31,10 @@ const WIDGET_DEFS = {
   speedtest: { labelKey: 'monitoring.speedtest', icon: Zap },
 };
 
-// Formater les vitesses réseau
-function formatSpeed(bytesPerSec) {
-  if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
-  if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
-  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-  if (bytesPerSec < 1024 * 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
-  return `${(bytesPerSec / 1024 / 1024 / 1024).toFixed(2)} GB/s`;
-}
+// Widgets qui ont une couleur secondaire
+const DUAL_COLOR_WIDGETS = ['network', 'perf'];
 
 const DEFAULT_SIZES = { sidebarWidth: 360 };
-
-// Composant mini-graphique pour un cœur CPU — mémoïsé pour éviter les re-renders inutiles
-const CoreChart = memo(function CoreChart({ data, coreIndex, currentLoad }) {
-  const color = currentLoad > 80 ? '#ef4444' : currentLoad > 50 ? '#f59e0b' : '#6366f1';
-
-  return (
-    <div className="core-chart-container">
-      <div className="core-chart-header">
-        <span className="core-chart-label">CPU {coreIndex}</span>
-        <span className="core-chart-value" style={{ color }}>{currentLoad?.toFixed(0)}%</span>
-      </div>
-      <div className="core-chart">
-        <ResponsiveContainer width="100%" height={50}>
-          <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id={`coreGradient${coreIndex}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey={`core${coreIndex}`}
-              stroke={color}
-              strokeWidth={1.5}
-              fill={`url(#coreGradient${coreIndex})`}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-});
-
-// Composant pour le GPU — mémoïsé
-const GpuChart = memo(function GpuChart({ data, gpuInfo, gpuLoad }) {
-  const color = '#22c55e';
-
-  return (
-    <div className="gpu-section">
-      <div className="section-header">
-        <Monitor size={18} />
-        <span>GPU - {gpuInfo?.model || 'N/A'}</span>
-        <span className="gpu-load">{gpuLoad?.toFixed(0) || 0}%</span>
-      </div>
-      <div className="gpu-chart">
-        <ResponsiveContainer width="100%" height={80}>
-          <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-            <defs>
-              <linearGradient id="gpuGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="gpuLoad"
-              stroke={color}
-              strokeWidth={2}
-              fill="url(#gpuGradient)"
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="gpu-stats">
-        {gpuInfo?.temperatureGpu > 0 && (
-          <div className="gpu-stat">
-            <Thermometer size={14} />
-            <span>{gpuInfo.temperatureGpu}°C</span>
-          </div>
-        )}
-        {gpuInfo?.memoryTotal > 0 && (
-          <div className="gpu-stat">
-            <span>VRAM: {(gpuInfo.memoryUsed || 0)} / {gpuInfo.memoryTotal} MB</span>
-          </div>
-        )}
-        {gpuInfo?.powerDraw > 0 && (
-          <div className="gpu-stat">
-            <span>{gpuInfo.powerDraw}W</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-
-// Mini jauge circulaire pour le widget Résumé Performances
-const MiniGauge = memo(function MiniGauge({ value, size = 56, strokeWidth = 5, color, label }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const pct = Math.min(value / 100, 1);
-  const dashOffset = circumference * (1 - pct);
-
-  return (
-    <div className="mini-gauge">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke="var(--bg-tertiary)" strokeWidth={strokeWidth}
-        />
-        <circle
-          className="mini-gauge-fill"
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke={color} strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
-        />
-      </svg>
-      <div className="mini-gauge-text">
-        <span className="mini-gauge-value" style={{ color }}>{Math.round(value)}%</span>
-      </div>
-      {label && <span className="mini-gauge-label">{label}</span>}
-    </div>
-  );
-});
 
 const DEFAULT_ALERT_CONFIG = {
   cpuTemp: { threshold: 85, enabled: true, notify: false },
@@ -174,9 +46,9 @@ function MonitoringModule() {
   const { t } = useTranslation();
   const { isFreeMode } = useLicense();
   const [staticInfo, setStaticInfo] = useState(null);
-  const [lightData, setLightData] = useState(null);   // CPU, RAM
-  const [networkData, setNetworkData] = useState(null); // networkStats (séparé)
-  const [heavyData, setHeavyData] = useState(null);    // GPU, temp, interfaces
+  const [lightData, setLightData] = useState(null);
+  const [networkData, setNetworkData] = useState(null);
+  const [heavyData, setHeavyData] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -184,8 +56,21 @@ function MonitoringModule() {
   const [gamingManual, setGamingManual] = useState(false);
   const historyRef = useRef([]);
   const networkDataRef = useRef(null);
-  const { widgets, isVisible, toggleWidget, moveWidget, getSize, setSize, resetConfig } = useModuleConfig('monitoring', DEFAULT_WIDGETS, DEFAULT_SIZES);
+
+  const { widgets, isVisible, toggleWidget, moveWidget, getSize, setSize, getExtra, setExtra, resetConfig } = useModuleConfig('monitoring', DEFAULT_WIDGETS, DEFAULT_SIZES);
   const sidebarWidth = getSize('sidebarWidth', 360);
+
+  // Couleurs par widget
+  const widgetColors = getExtra('widgetColors', DEFAULT_WIDGET_COLORS);
+
+  const setWidgetColor = useCallback((widgetId, slot, color) => {
+    const updated = { ...widgetColors, [widgetId]: { ...widgetColors[widgetId], [slot]: color } };
+    setExtra('widgetColors', updated);
+  }, [widgetColors, setExtra]);
+
+  const resetColors = useCallback(() => {
+    setExtra('widgetColors', DEFAULT_WIDGET_COLORS);
+  }, [setExtra]);
 
   // Alertes température
   const [alertConfig, setAlertConfig] = useState(() => {
@@ -205,13 +90,13 @@ function MonitoringModule() {
     } catch { return null; }
   });
   const [speedtestRunning, setSpeedtestRunning] = useState(false);
+  const [speedtestError, setSpeedtestError] = useState(null);
 
-  // Résoudre les labels i18n des widgets
   const resolvedWidgetDefs = Object.fromEntries(
     Object.entries(WIDGET_DEFS).map(([id, def]) => [id, { ...def, label: t(def.labelKey) }])
   );
 
-  // Charger les données statiques une seule fois au démarrage
+  // Charger les données statiques
   useEffect(() => {
     const loadStaticData = async () => {
       try {
@@ -226,17 +111,13 @@ function MonitoringModule() {
     loadStaticData();
   }, []);
 
-  // Pause/Resume le worker selon la visibilité du module
+  // Pause/Resume worker
   useEffect(() => {
-    // Reprendre le polling quand le module est monté (visible)
     window.electronAPI?.setMonitoringPaused?.(false);
-    return () => {
-      // Pauser le polling quand on quitte le module
-      window.electronAPI?.setMonitoringPaused?.(true);
-    };
+    return () => { window.electronAPI?.setMonitoringPaused?.(true); };
   }, []);
 
-  // Architecture push — écouter les données du worker (process séparé)
+  // Écouter les données du worker
   useEffect(() => {
     if (!window.electronAPI?.onMonitoringData) return;
 
@@ -246,25 +127,18 @@ function MonitoringModule() {
         setLightData(data);
         setLoading(false);
 
-        // Débit réseau depuis les dernières données réseau
         const netStats = networkDataRef.current?.networkStats || [];
         const totalDown = netStats.reduce((sum, n) => sum + Math.max(0, n.rx_sec || 0), 0);
         const totalUp = netStats.reduce((sum, n) => sum + Math.max(0, n.tx_sec || 0), 0);
 
-        // Construire l'entrée historique
         const coreLoads = {};
-        data.cpuLoad?.cpus?.forEach((cpu, i) => {
-          coreLoads[`core${i}`] = cpu.load;
-        });
+        data.cpuLoad?.cpus?.forEach((cpu, i) => { coreLoads[`core${i}`] = cpu.load; });
 
-        const newEntry = {
-          time: Date.now(),
-          total: data.cpuLoad?.currentLoad || 0,
-          netDown: totalDown,
-          netUp: totalUp,
-          ...coreLoads,
-        };
+        const memUsedBytes = data.mem?.used || 0;
+        const memTotalBytes = data.mem?.total || 1;
+        const ramPct = (memUsedBytes / memTotalBytes) * 100;
 
+        const newEntry = { time: Date.now(), total: data.cpuLoad?.currentLoad || 0, netDown: totalDown, netUp: totalUp, ramPercent: ramPct, ...coreLoads };
         const lastEntry = historyRef.current[historyRef.current.length - 1];
         newEntry.gpuLoad = lastEntry?.gpuLoad || 0;
 
@@ -282,9 +156,7 @@ function MonitoringModule() {
         setHeavyData(data);
 
         const gpuControllers = data.graphics?.controllers || [];
-        const primaryGpu = gpuControllers.reduce((best, gpu) =>
-          (gpu.vram || 0) > (best?.vram || 0) ? gpu : best
-        , gpuControllers[0]);
+        const primaryGpu = gpuControllers.reduce((best, gpu) => (gpu.vram || 0) > (best?.vram || 0) ? gpu : best, gpuControllers[0]);
         const gpuLoad = primaryGpu?.utilizationGpu || 0;
 
         if (historyRef.current.length > 0) {
@@ -296,22 +168,17 @@ function MonitoringModule() {
 
       if (msg.type === 'gaming-mode') {
         setGamingMode(msg.data.active);
-        // Si le worker désactive le gaming, vérifier si c'est un retour auto (pas manuel)
-        if (!msg.data.active && !msg.data.manual) {
-          setGamingManual(false);
-        }
+        if (!msg.data.active && !msg.data.manual) setGamingManual(false);
       }
     });
   }, []);
 
-  // Vérification des alertes température
+  // Alertes température
   useEffect(() => {
     if (!lightData || !heavyData) return;
     const cpuT = heavyData?.cpuTemp?.main || 0;
     const gpuControllers = heavyData?.graphics?.controllers || [];
-    const primaryGpu = gpuControllers.reduce((best, gpu) =>
-      (gpu.vram || 0) > (best?.vram || 0) ? gpu : best
-    , gpuControllers[0]);
+    const primaryGpu = gpuControllers.reduce((best, gpu) => (gpu.vram || 0) > (best?.vram || 0) ? gpu : best, gpuControllers[0]);
     const gpuT = primaryGpu?.temperatureGpu || 0;
     const ramPct = lightData?.mem ? ((lightData.mem.used / lightData.mem.total) * 100) : 0;
     const now = Date.now();
@@ -352,13 +219,9 @@ function MonitoringModule() {
   const toggleGamingManual = useCallback(() => {
     const next = !gamingManual;
     setGamingManual(next);
-    if (next) {
-      setGamingMode(true);
-    }
+    if (next) setGamingMode(true);
     window.electronAPI?.setGamingManual?.(next);
   }, [gamingManual]);
-
-  const [speedtestError, setSpeedtestError] = useState(null);
 
   const runSpeedtest = useCallback(async () => {
     if (speedtestRunning) return;
@@ -370,11 +233,9 @@ function MonitoringModule() {
         setSpeedtestResult(result.data);
         localStorage.setItem('monitoring_speedtest', JSON.stringify(result.data));
       } else {
-        console.error('Speedtest failed:', result.error);
         setSpeedtestError(result.error || 'Speedtest failed');
       }
     } catch (error) {
-      console.error('Speedtest error:', error);
       setSpeedtestError(error.message || 'Speedtest error');
     } finally {
       setSpeedtestRunning(false);
@@ -396,214 +257,26 @@ function MonitoringModule() {
   const memPercent = ((memUsed / memTotal) * 100).toFixed(1);
   const cpuTemp = heavyData?.cpuTemp?.main || 0;
 
-  // GPU depuis les données lourdes
   const gpuControllers = heavyData?.graphics?.controllers || [];
-  const discreteGpu = gpuControllers.reduce((best, gpu) =>
-    (gpu.vram || 0) > (best?.vram || 0) ? gpu : best
-  , gpuControllers[0]);
+  const discreteGpu = gpuControllers.reduce((best, gpu) => (gpu.vram || 0) > (best?.vram || 0) ? gpu : best, gpuControllers[0]);
 
-  // Auto-calculer le nombre de colonnes selon le nombre de cœurs
   const coreCount = cpuCores.length;
-  const cpuGridColumns = coreCount <= 4 ? coreCount
-    : coreCount <= 8 ? 4
-    : coreCount <= 12 ? 4
-    : coreCount <= 16 ? 4
-    : coreCount <= 24 ? 6
-    : 8;
+  const cpuGridColumns = coreCount <= 4 ? coreCount : coreCount <= 8 ? 4 : coreCount <= 16 ? 4 : coreCount <= 24 ? 6 : 8;
 
-  // Données réseau — networkInterfaces depuis heavy, networkStats depuis polling réseau séparé
   const netStats = networkData?.networkStats || [];
   const netInterfaces = heavyData?.networkInterfaces || [];
-  const activeInterfaces = netInterfaces.filter(ni =>
-    ni.ip4 && ni.ip4 !== '127.0.0.1' && ni.ip4 !== '' && !ni.internal
-  );
+  const activeInterfaces = netInterfaces.filter(ni => ni.ip4 && ni.ip4 !== '127.0.0.1' && ni.ip4 !== '' && !ni.internal);
   const totalRxSec = netStats.reduce((sum, n) => sum + Math.max(0, n.rx_sec || 0), 0);
   const totalTxSec = netStats.reduce((sum, n) => sum + Math.max(0, n.tx_sec || 0), 0);
 
-  // Séparer disques locaux et réseau
   const allDisks = staticInfo?.disk || [];
   const localDisks = allDisks.filter(d => !d.isNetwork);
   const networkDisks = allDisks.filter(d => d.isNetwork);
 
-  // Renderers pour la sidebar (ordre dynamique)
-  const sidebarRenderers = {
-    gpu: () => (
-      <GpuChart
-        key="gpu"
-        data={history}
-        gpuInfo={discreteGpu}
-        gpuLoad={discreteGpu?.utilizationGpu || 0}
-      />
-    ),
-    ram: () => (
-      <div key="ram" className="card compact">
-        <div className="card-header">
-          <MemoryStick size={16} />
-          <span className="card-title">RAM</span>
-          <span className="card-value-inline">{memPercent}%</span>
-        </div>
-        <div className="progress-bar">
-          <div
-            className={`progress-fill ${memPercent > 80 ? 'danger' : memPercent > 60 ? 'warning' : 'accent'}`}
-            style={{ width: `${memPercent}%` }}
-          />
-        </div>
-        <div className="card-subtitle">
-          {(memUsed / 1024 / 1024 / 1024).toFixed(1)} / {(memTotal / 1024 / 1024 / 1024).toFixed(0)} Go
-        </div>
-      </div>
-    ),
-    disks: () => (
-      <div key="disks" className="card compact">
-        <div className="card-header">
-          <HardDrive size={16} />
-          <span className="card-title">{t('monitoring.disks')}</span>
-        </div>
-        <div className="disks-list">
-          {localDisks.map((disk, index) => {
-            const usedPercent = ((disk.used / disk.size) * 100).toFixed(0);
-            return (
-              <div
-                key={index}
-                className="disk-item-compact clickable"
-                onClick={() => window.electronAPI?.openPath(disk.mount + '\\')}
-              >
-                <div className="disk-info-compact">
-                  <span className="disk-mount">{disk.mount}</span>
-                  <span className="disk-free">{(disk.available / 1024 / 1024 / 1024).toFixed(0)}Go</span>
-                </div>
-                <div className="progress-bar small">
-                  <div
-                    className={`progress-fill ${usedPercent > 90 ? 'danger' : usedPercent > 75 ? 'warning' : 'success'}`}
-                    style={{ width: `${usedPercent}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    ),
-    networkDisks: () => networkDisks.length > 0 ? (
-      <div key="networkDisks" className="card compact">
-        <div className="card-header">
-          <Network size={16} />
-          <span className="card-title">{t('monitoring.networkDisks')}</span>
-        </div>
-        <div className="disks-list">
-          {networkDisks.map((disk, index) => {
-            const usedPercent = disk.size > 0 ? ((disk.used / disk.size) * 100).toFixed(0) : 0;
-            return (
-              <div
-                key={index}
-                className="disk-item-compact clickable"
-                onClick={() => window.electronAPI?.openPath(disk.mount + '\\')}
-              >
-                <div className="disk-info-compact">
-                  <span className="disk-mount network">{disk.mount}</span>
-                  <span className="disk-free">{(disk.available / 1024 / 1024 / 1024).toFixed(0)}Go</span>
-                </div>
-                <div className="progress-bar small">
-                  <div
-                    className={`progress-fill ${usedPercent > 90 ? 'danger' : usedPercent > 75 ? 'warning' : 'success'}`}
-                    style={{ width: `${usedPercent}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    ) : null,
-    perf: () => {
-      const cpuTotalLoad = lightData?.cpuLoad?.currentLoad || 0;
-      const gpuLoad = discreteGpu?.utilizationGpu || 0;
-      const gpuTemp = discreteGpu?.temperatureGpu || 0;
-      const uptimeSec = lightData?.uptime || 0;
-      const hours = Math.floor(uptimeSec / 3600);
-      const minutes = Math.floor((uptimeSec % 3600) / 60);
-      const uptimeStr = `${hours}h ${minutes}m`;
-      const cpuColor = cpuTotalLoad > 80 ? '#ef4444' : cpuTotalLoad > 50 ? '#f59e0b' : '#6366f1';
-      const gpuColor = gpuLoad > 80 ? '#ef4444' : gpuLoad > 50 ? '#f59e0b' : '#22c55e';
-      const hasAlert = activeAlerts.cpuTemp || activeAlerts.gpuTemp || activeAlerts.ramPercent;
+  const modeProps = { history, discreteGpu, memUsed, memTotal, memPercent, localDisks, networkDisks, lightData, activeAlerts, cpuTemp, speedtestResult, speedtestRunning, speedtestError, runSpeedtest, t, colors: widgetColors, staticInfo };
+  const sidebar = CurvesMode.sidebarRenderers(modeProps);
 
-      return (
-        <div key="perf" className={`card compact perf-summary ${hasAlert ? 'has-alert' : ''}`}>
-          <div className="card-header">
-            <Gauge size={16} />
-            <span className="card-title">{t('monitoring.perfSummary')}</span>
-          </div>
-          <div className="perf-gauges">
-            <MiniGauge value={cpuTotalLoad} color={cpuColor} label="CPU" />
-            <MiniGauge value={gpuLoad} color={gpuColor} label="GPU" />
-          </div>
-          <div className="perf-temps">
-            {cpuTemp > 0 && (
-              <div className={`perf-temp-item ${activeAlerts.cpuTemp ? 'alert-active' : ''}`}>
-                <Thermometer size={12} />
-                <span>CPU {cpuTemp}°C</span>
-              </div>
-            )}
-            {gpuTemp > 0 && (
-              <div className={`perf-temp-item ${activeAlerts.gpuTemp ? 'alert-active' : ''}`}>
-                <Thermometer size={12} />
-                <span>GPU {gpuTemp}°C</span>
-              </div>
-            )}
-          </div>
-          <div className="perf-uptime">
-            <Clock size={12} />
-            <span>{t('monitoring.uptime')}: {uptimeStr}</span>
-          </div>
-        </div>
-      );
-    },
-    speedtest: () => (
-      <div key="speedtest" className="card compact speedtest-widget">
-        <div className="card-header">
-          <Zap size={16} />
-          <span className="card-title">{t('monitoring.speedtest')}</span>
-          <button
-            className="speedtest-run-btn"
-            onClick={runSpeedtest}
-            disabled={speedtestRunning}
-          >
-            {speedtestRunning ? <Loader size={14} className="spinning" /> : <Play size={14} />}
-            <span>{speedtestRunning ? '...' : t('monitoring.runSpeedtest')}</span>
-          </button>
-        </div>
-        {speedtestResult ? (
-          <div className="speedtest-results">
-            <div className="speedtest-row">
-              <ArrowDown size={14} className="speedtest-icon-down" />
-              <span className="speedtest-label">{t('monitoring.download')}</span>
-              <span className="speedtest-value">{(speedtestResult.download / 125000).toFixed(1)} Mbps</span>
-            </div>
-            <div className="speedtest-row">
-              <ArrowUp size={14} className="speedtest-icon-up" />
-              <span className="speedtest-label">{t('monitoring.upload')}</span>
-              <span className="speedtest-value">{(speedtestResult.upload / 125000).toFixed(1)} Mbps</span>
-            </div>
-            <div className="speedtest-row">
-              <Activity size={14} />
-              <span className="speedtest-label">Ping</span>
-              <span className="speedtest-value">{speedtestResult.ping?.toFixed(0)} ms</span>
-            </div>
-            <div className="speedtest-meta">
-              <span>{speedtestResult.server}</span>
-              <span>{new Date(speedtestResult.timestamp).toLocaleString()}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="speedtest-empty">
-            <span>{t('monitoring.noSpeedtest')}</span>
-            {speedtestError && <span className="speedtest-error">{speedtestError}</span>}
-          </div>
-        )}
-      </div>
-    ),
-  };
-
+  // Settings
   if (showSettings) {
     return (
       <ModuleSettingsPanel
@@ -617,6 +290,41 @@ function MonitoringModule() {
         sizes={[{ key: 'sidebarWidth', label: t('monitoring.rightColumnWidth'), min: 280, max: 500, step: 10, value: sidebarWidth }]}
         onSizeChange={setSize}
       >
+        {/* Couleurs par widget */}
+        <div className="colors-section">
+          <h4 className="msp-section-title">
+            {t('monitoring.widgetColors')}
+            <button className="colors-reset-btn" onClick={resetColors} title={t('monitoring.resetColors')}>
+              <RotateCcw size={14} />
+            </button>
+          </h4>
+          <div className="colors-list">
+            {widgets.filter(w => w.visible).map(w => {
+              const def = resolvedWidgetDefs[w.id];
+              if (!def) return null;
+              const hasDual = DUAL_COLOR_WIDGETS.includes(w.id);
+              const currentPrimary = widgetColors?.[w.id]?.primary || DEFAULT_WIDGET_COLORS[w.id]?.primary || '#6366f1';
+              const currentSecondary = widgetColors?.[w.id]?.secondary || DEFAULT_WIDGET_COLORS[w.id]?.secondary || '#f59e0b';
+              return (
+                <div key={w.id} className="color-picker-row">
+                  <span className="color-picker-label">{def.label}</span>
+                  <div className="color-picker-inputs">
+                    <label className="color-input-wrap">
+                      <input type="color" value={currentPrimary} onChange={(e) => setWidgetColor(w.id, 'primary', e.target.value)} />
+                    </label>
+                    {hasDual && (
+                      <label className="color-input-wrap secondary">
+                        <input type="color" value={currentSecondary} onChange={(e) => setWidgetColor(w.id, 'secondary', e.target.value)} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Alertes */}
         <div className="alert-config-section">
           <h4 className="msp-section-title">{t('monitoring.alertSettings')}</h4>
           {[
@@ -626,29 +334,13 @@ function MonitoringModule() {
           ].map(({ key, label, unit, min, max }) => (
             <div key={key} className="alert-config-row">
               <label className="alert-config-label">
-                <input
-                  type="checkbox"
-                  checked={alertConfig[key].enabled}
-                  onChange={() => updateAlertConfig(key, { enabled: !alertConfig[key].enabled })}
-                />
+                <input type="checkbox" checked={alertConfig[key].enabled} onChange={() => updateAlertConfig(key, { enabled: !alertConfig[key].enabled })} />
                 <span>{label}</span>
               </label>
               <div className="alert-config-controls">
-                <input
-                  type="range"
-                  min={min}
-                  max={max}
-                  value={alertConfig[key].threshold}
-                  onChange={(e) => updateAlertConfig(key, { threshold: Number(e.target.value) })}
-                  disabled={!alertConfig[key].enabled}
-                />
+                <input type="range" min={min} max={max} value={alertConfig[key].threshold} onChange={(e) => updateAlertConfig(key, { threshold: Number(e.target.value) })} disabled={!alertConfig[key].enabled} />
                 <span className="alert-config-value">{alertConfig[key].threshold}{unit}</span>
-                <button
-                  className={`alert-notify-btn ${alertConfig[key].notify ? 'active' : ''}`}
-                  onClick={() => updateAlertConfig(key, { notify: !alertConfig[key].notify })}
-                  disabled={!alertConfig[key].enabled}
-                  title={alertConfig[key].notify ? t('monitoring.notifyOn') : t('monitoring.notifyOff')}
-                >
+                <button className={`alert-notify-btn ${alertConfig[key].notify ? 'active' : ''}`} onClick={() => updateAlertConfig(key, { notify: !alertConfig[key].notify })} disabled={!alertConfig[key].enabled} title={alertConfig[key].notify ? t('monitoring.notifyOn') : t('monitoring.notifyOff')}>
                   {alertConfig[key].notify ? <Bell size={14} /> : <BellOff size={14} />}
                 </button>
               </div>
@@ -670,7 +362,7 @@ function MonitoringModule() {
         gridTemplateRows: hasNetwork ? '1fr auto' : '1fr',
       }}
     >
-      {/* Section CPU avec grille de graphiques */}
+      {/* Section CPU */}
       {hasCpu && (
         <div className="cpu-grid-section">
           <div className="section-header-main">
@@ -683,10 +375,7 @@ function MonitoringModule() {
               </span>
             )}
             {!isFreeMode && (
-              <button
-                className={`gaming-toggle-btn ${gamingMode ? 'active' : ''}`}
-                onClick={toggleGamingManual}
-              >
+              <button className={`gaming-toggle-btn ${gamingMode ? 'active' : ''}`} onClick={toggleGamingManual}>
                 <Gamepad2 size={14} />
                 <span className="gaming-toggle-label">{t('monitoring.gamingMode')}</span>
                 <span className={`gaming-toggle-badge ${gamingMode ? 'on' : 'off'}`}>
@@ -698,21 +387,10 @@ function MonitoringModule() {
               <Settings size={16} />
             </button>
           </div>
-
-          <div className="cores-grid-charts" style={{ gridTemplateColumns: `repeat(${cpuGridColumns}, 1fr)` }}>
-            {cpuCores.map((core, index) => (
-              <CoreChart
-                key={index}
-                data={history}
-                coreIndex={index}
-                currentLoad={core.load}
-              />
-            ))}
-          </div>
+          <CurvesMode.CpuSection cpuCores={cpuCores} history={history} cpuGridColumns={cpuGridColumns} colors={widgetColors} />
         </div>
       )}
 
-      {/* Si CPU masqué, afficher le bouton settings ailleurs */}
       {!hasCpu && (
         <div className="monitoring-no-cpu">
           <button className="monitoring-settings-btn standalone" onClick={() => setShowSettings(true)} title={t('common.settings')}>
@@ -721,59 +399,16 @@ function MonitoringModule() {
         </div>
       )}
 
-      {/* Section Réseau — sous le CPU */}
+      {/* Section Réseau */}
       {hasNetwork && (
-        <div className="network-section">
-          <div className="network-header">
-            <Wifi size={16} />
-            <span>{t('monitoring.network')}</span>
-            <div className="network-speeds">
-              <span className="network-speed down">
-                <ArrowDown size={14} />
-                {formatSpeed(totalRxSec)}
-              </span>
-              <span className="network-speed up">
-                <ArrowUp size={14} />
-                {formatSpeed(totalTxSec)}
-              </span>
-            </div>
-          </div>
-          <div className="network-body">
-            <div className="network-chart">
-              <ResponsiveContainer width="100%" height={60}>
-                <AreaChart data={history} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
-                  <defs>
-                    <linearGradient id="netDownGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="netUpGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="netDown" stroke="#3b82f6" strokeWidth={1.5} fill="url(#netDownGrad)" isAnimationActive={false} />
-                  <Area type="monotone" dataKey="netUp" stroke="#f59e0b" strokeWidth={1.5} fill="url(#netUpGrad)" isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="network-interfaces">
-              {activeInterfaces.map((ni, i) => (
-                <div key={i} className="network-interface">
-                  <span className="ni-name">{ni.ifaceName || ni.iface}</span>
-                  <span className="ni-ip">{ni.ip4}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CurvesMode.NetworkSection history={history} totalRxSec={totalRxSec} totalTxSec={totalTxSec} activeInterfaces={activeInterfaces} t={t} colors={widgetColors} />
       )}
 
       {/* Colonne droite */}
       <div className="monitoring-sidebar">
         {widgets
-          .filter(w => w.id !== 'cpu' && w.id !== 'network' && w.visible && sidebarRenderers[w.id])
-          .map(w => sidebarRenderers[w.id]())
+          .filter(w => w.id !== 'cpu' && w.id !== 'network' && w.visible && sidebar[w.id])
+          .map(w => sidebar[w.id]())
         }
       </div>
     </div>

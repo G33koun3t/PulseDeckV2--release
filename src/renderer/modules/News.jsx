@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Settings, RefreshCw, Plus, Trash2, X, TrendingUp, TrendingDown, Bitcoin } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import './News.css';
@@ -85,7 +85,7 @@ const CRYPTO_LIST = [
   { id: 'dogecoin', symbol: 'DOGE' },
   { id: 'avalanche-2', symbol: 'AVAX' },
   { id: 'polkadot', symbol: 'DOT' },
-  { id: 'matic-network', symbol: 'POL' },
+  { id: 'polygon-ecosystem-token', symbol: 'POL' },
 ];
 
 const LANG_CURRENCY = {
@@ -104,18 +104,34 @@ function formatCryptoPrice(value, currency) {
   return `${sym}${value.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
 }
 
-const CATEGORY_KEYS = [
-  { id: 'all', labelKey: 'news.all' },
-  { id: 'gaming', labelKey: 'news.gaming' },
-  { id: 'tech', labelKey: 'news.tech' },
-  { id: 'deals', labelKey: 'news.deals' },
-];
+// Catégories par défaut avec traductions
+const DEFAULT_CATEGORIES = ['gaming', 'tech', 'deals'];
+
+const CATEGORY_LABEL_KEYS = {
+  all: 'news.all',
+  gaming: 'news.gaming',
+  tech: 'news.tech',
+  deals: 'news.deals',
+};
 
 const CATEGORY_COLORS = {
   gaming: '#9b59b6',
   tech: '#3498db',
   deals: '#2ecc71',
 };
+
+const EXTRA_COLORS = ['#e67e22', '#e74c3c', '#1abc9c', '#f39c12', '#8e44ad', '#16a085'];
+
+function getCategoryColor(cat) {
+  if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
+  const hash = [...cat].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return EXTRA_COLORS[hash % EXTRA_COLORS.length];
+}
+
+function getCategoryLabel(cat, t) {
+  if (CATEGORY_LABEL_KEYS[cat]) return t(CATEGORY_LABEL_KEYS[cat]);
+  return cat.charAt(0).toUpperCase() + cat.slice(1);
+}
 
 function getRelativeTime(dateStr, t, dateLocale) {
   if (!dateStr) return '';
@@ -168,6 +184,13 @@ function NewsModule() {
   });
   const refreshTimer = useRef(null);
   const cryptoTimer = useRef(null);
+
+  // Catégories dynamiques depuis les feeds
+  const categories = useMemo(() => {
+    const cats = new Set(feeds.map(f => f.category));
+    return ['all', ...DEFAULT_CATEGORIES, ...Array.from(cats)]
+      .filter((v, i, a) => a.indexOf(v) === i);
+  }, [feeds]);
 
   useEffect(() => {
     localStorage.setItem('news_feeds', JSON.stringify(feeds));
@@ -346,14 +369,14 @@ function NewsModule() {
       </div>
 
       <div className="news-tabs">
-        {CATEGORY_KEYS.map(cat => (
+        {categories.map(cat => (
           <button
-            key={cat.id}
-            className={`news-tab ${activeCategory === cat.id ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat.id)}
-            style={activeCategory === cat.id && cat.id !== 'all' ? { borderColor: CATEGORY_COLORS[cat.id] } : {}}
+            key={cat}
+            className={`news-tab ${activeCategory === cat ? 'active' : ''}`}
+            onClick={() => setActiveCategory(cat)}
+            style={activeCategory === cat && cat !== 'all' ? { borderColor: getCategoryColor(cat) } : {}}
           >
-            {t(cat.labelKey)}
+            {getCategoryLabel(cat, t)}
           </button>
         ))}
       </div>
@@ -381,9 +404,9 @@ function NewsModule() {
                   <span className="news-feed-name">{feed.name}</span>
                   <span
                     className="news-category-badge"
-                    style={{ background: CATEGORY_COLORS[feed.category] }}
+                    style={{ background: getCategoryColor(feed.category) }}
                   >
-                    {CATEGORY_KEYS.find(c => c.id === feed.category) ? t(CATEGORY_KEYS.find(c => c.id === feed.category).labelKey) : feed.category}
+                    {getCategoryLabel(feed.category, t)}
                   </span>
                 </label>
                 <button className="news-feed-delete" onClick={() => removeFeed(feed.id)} title={t('common.delete')}>
@@ -405,14 +428,18 @@ function NewsModule() {
               value={newFeed.url}
               onChange={e => setNewFeed(prev => ({ ...prev, url: e.target.value }))}
             />
-            <select
+            <input
+              type="text"
+              list="news-category-list"
+              placeholder={t('news.categoryName')}
               value={newFeed.category}
-              onChange={e => setNewFeed(prev => ({ ...prev, category: e.target.value }))}
-            >
-              <option value="gaming">{t('news.gaming')}</option>
-              <option value="tech">{t('news.tech')}</option>
-              <option value="deals">{t('news.deals')}</option>
-            </select>
+              onChange={e => setNewFeed(prev => ({ ...prev, category: e.target.value.toLowerCase() }))}
+            />
+            <datalist id="news-category-list">
+              {categories.filter(c => c !== 'all').map(c => (
+                <option key={c} value={c}>{getCategoryLabel(c, t)}</option>
+              ))}
+            </datalist>
             <button className="news-btn news-btn-add" onClick={addFeed}>
               <Plus size={16} />
               {t('common.add')}
@@ -444,9 +471,9 @@ function NewsModule() {
               )}
               <span
                 className="news-card-badge"
-                style={{ background: CATEGORY_COLORS[article.category] }}
+                style={{ background: getCategoryColor(article.category) }}
               >
-                {CATEGORY_KEYS.find(c => c.id === article.category) ? t(CATEGORY_KEYS.find(c => c.id === article.category).labelKey) : article.category}
+                {getCategoryLabel(article.category, t)}
               </span>
             </div>
             <div className="news-card-body">

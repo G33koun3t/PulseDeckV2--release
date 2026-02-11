@@ -1027,7 +1027,7 @@ function registerIpcHandlers() {
 
   // Crypto - Prix via CoinGecko API (gratuit, sans clé)
   ipcMain.handle('fetch-crypto-prices', async () => {
-    const ids = 'bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,avalanche-2,polkadot,matic-network';
+    const ids = 'bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,avalanche-2,polkadot,polygon-ecosystem-token';
     const currencies = 'eur,usd,pln,jpy';
     const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=${currencies}&include_24hr_change=true`;
     try {

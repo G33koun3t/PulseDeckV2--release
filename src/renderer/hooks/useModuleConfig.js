@@ -29,9 +29,12 @@ export default function useModuleConfig(moduleId, defaultWidgets, defaultSizes =
           .filter(d => !storedIds.includes(d.id))
           .map(d => ({ id: d.id, visible: d.defaultVisible !== false })),
       ];
+      // Préserver les champs extras (presentationMode, widgetColors, etc.)
+      const { widgets: _w, sizes: _s, ...extras } = parsed;
       return {
         widgets: merged,
         sizes: { ...defaultSizes, ...parsed.sizes },
+        ...extras,
       };
     } catch {
       return {
@@ -76,6 +79,14 @@ export default function useModuleConfig(moduleId, defaultWidgets, defaultSizes =
     persist({ ...config, sizes: { ...config.sizes, [key]: Number(value) } });
   }, [config, persist]);
 
+  const getExtra = useCallback((key, defaultValue) => {
+    return config[key] ?? defaultValue;
+  }, [config]);
+
+  const setExtra = useCallback((key, value) => {
+    persist({ ...config, [key]: value });
+  }, [config, persist]);
+
   const resetConfig = useCallback(() => {
     const defaults = {
       widgets: defaultWidgets.map(w => ({ id: w.id, visible: w.defaultVisible !== false })),
@@ -91,6 +102,8 @@ export default function useModuleConfig(moduleId, defaultWidgets, defaultSizes =
     moveWidget,
     getSize,
     setSize,
+    getExtra,
+    setExtra,
     resetConfig,
   };
 }

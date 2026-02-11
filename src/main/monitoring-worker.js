@@ -23,6 +23,7 @@ const GAMING_CONSECUTIVE = 2;
 
 let currentMode = 'normal';
 let gamingAutoEnabled = true;
+let gamingManualActive = false;
 let gpuAboveCount = 0;
 let gpuBelowCount = 0;
 let paused = false; // true quand l'onglet monitoring n'est pas actif
@@ -146,8 +147,8 @@ async function collectHeavy() {
 
     process.send({ type: 'heavy', data: { cpuTemp, graphics, networkInterfaces } });
 
-    // Détection gaming mode auto
-    if (gamingAutoEnabled) {
+    // Détection gaming mode auto (ignorée si mode manuel actif)
+    if (gamingAutoEnabled && !gamingManualActive) {
       const gpuLoad = primaryGpu?.utilizationGpu || 0;
       if (gpuLoad > GPU_GAMING_THRESHOLD) {
         gpuAboveCount++;
@@ -185,6 +186,7 @@ process.on('message', (msg) => {
   }
   if (msg.type === 'set-gaming-manual') {
     // Mode gaming forcé par l'utilisateur
+    gamingManualActive = msg.active;
     if (msg.active) {
       currentMode = 'gaming';
       gpuAboveCount = 0;
