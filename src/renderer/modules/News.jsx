@@ -160,16 +160,23 @@ function stripHtml(html) {
 function NewsModule() {
   const { t, lang, dateLocale } = useTranslation();
   const [feeds, setFeeds] = useState(() => {
-    const saved = localStorage.getItem('news_feeds');
     const savedLang = localStorage.getItem('news_feeds_lang');
-    const isCustom = localStorage.getItem('news_feeds_custom') === 'true';
-    // Si pas de feeds sauvegardés, ou si la langue a changé et pas de personnalisation
-    if (!saved || (!isCustom && savedLang && savedLang !== lang)) {
+    // Si la langue a changé → toujours recharger les defaults (même si custom)
+    if (savedLang && savedLang !== lang) {
+      localStorage.removeItem('news_feeds_custom');
+      localStorage.setItem('news_feeds_lang', lang);
       return getDefaultFeeds(lang);
     }
-    return JSON.parse(saved);
+    // Même langue → charger la sauvegarde si elle existe
+    const saved = localStorage.getItem('news_feeds');
+    if (saved) return JSON.parse(saved);
+    // Premier lancement
+    localStorage.setItem('news_feeds_lang', lang);
+    return getDefaultFeeds(lang);
   });
   const [isCustomFeeds, setIsCustomFeeds] = useState(() => {
+    const savedLang = localStorage.getItem('news_feeds_lang');
+    if (savedLang && savedLang !== lang) return false;
     return localStorage.getItem('news_feeds_custom') === 'true';
   });
   const [articles, setArticles] = useState([]);
@@ -184,7 +191,6 @@ function NewsModule() {
   });
   const refreshTimer = useRef(null);
   const cryptoTimer = useRef(null);
-  const prevLangRef = useRef(lang);
 
   // Catégories dynamiques depuis les feeds
   const categories = useMemo(() => {
@@ -204,15 +210,7 @@ function NewsModule() {
   useEffect(() => {
     localStorage.setItem('news_feeds', JSON.stringify(feeds));
     localStorage.setItem('news_feeds_lang', lang);
-  }, [feeds, lang]);
-
-  // Quand la langue change et que les feeds ne sont pas personnalisés, basculer
-  useEffect(() => {
-    if (prevLangRef.current !== lang && !isCustomFeeds) {
-      setFeeds(getDefaultFeeds(lang));
-    }
-    prevLangRef.current = lang;
-  }, [lang, isCustomFeeds]);
+  }, [feeds]);
 
   // Crypto ticker — fetch toutes les 2 min
   const fetchCrypto = useCallback(async () => {
