@@ -187,10 +187,18 @@ function NewsModule() {
 
   // Catégories dynamiques depuis les feeds
   const categories = useMemo(() => {
-    const cats = new Set(feeds.map(f => f.category));
+    const cats = new Set(feeds.map(f => f.category).filter(c => c && c.trim()));
     return ['all', ...DEFAULT_CATEGORIES, ...Array.from(cats)]
       .filter((v, i, a) => a.indexOf(v) === i);
   }, [feeds]);
+
+  // Supprimer une catégorie (les flux restent mais sans catégorie)
+  const removeCategory = (cat) => {
+    setFeeds(prev => prev.map(f => f.category === cat ? { ...f, category: '' } : f));
+    setIsCustomFeeds(true);
+    localStorage.setItem('news_feeds_custom', 'true');
+    if (activeCategory === cat) setActiveCategory('all');
+  };
 
   useEffect(() => {
     localStorage.setItem('news_feeds', JSON.stringify(feeds));
@@ -370,14 +378,24 @@ function NewsModule() {
 
       <div className="news-tabs">
         {categories.map(cat => (
-          <button
-            key={cat}
-            className={`news-tab ${activeCategory === cat ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat)}
-            style={activeCategory === cat && cat !== 'all' ? { borderColor: getCategoryColor(cat) } : {}}
-          >
-            {getCategoryLabel(cat, t)}
-          </button>
+          <div key={cat} className="news-tab-wrapper">
+            <button
+              className={`news-tab ${activeCategory === cat ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat)}
+              style={activeCategory === cat && cat !== 'all' ? { borderColor: getCategoryColor(cat) } : {}}
+            >
+              {getCategoryLabel(cat, t)}
+            </button>
+            {cat !== 'all' && (
+              <button
+                className="news-tab-delete"
+                onClick={(e) => { e.stopPropagation(); removeCategory(cat); }}
+                title={t('news.deleteCategory')}
+              >
+                <X size={10} />
+              </button>
+            )}
+          </div>
         ))}
       </div>
 

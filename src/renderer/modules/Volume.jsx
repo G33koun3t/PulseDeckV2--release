@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Volume2, VolumeX, Volume1, Speaker, RefreshCw, ChevronDown, Monitor,
-  SkipBack, Play, SkipForward, Settings, Activity, Gauge, Zap, AudioWaveform
+  SkipBack, Play, Pause, SkipForward, Settings, Activity, Gauge, Zap, AudioWaveform
 } from 'lucide-react';
 import useModuleConfig from '../hooks/useModuleConfig';
 import ModuleSettingsPanel from '../components/ModuleSettingsPanel';
@@ -29,10 +29,7 @@ const WIDGET_DEFS = {
   visualizer: { labelKey: 'volume.visualizer', icon: AudioWaveform },
 };
 
-const LEFT_WIDGETS = ['volumeDisplay', 'volumeBars', 'visualizer', 'volumePresets'];
-const RIGHT_WIDGETS = ['deviceSelector', 'quickActions', 'mediaControls'];
-
-const DEFAULT_SIZES = { rightColumnWidth: 320 };
+const DEFAULT_SIZES = {};
 
 // Obtenir l'icône de volume selon le niveau
 const getVolumeIcon = (volume, muted, size = 24) => {
@@ -227,10 +224,10 @@ function VolumeModule() {
   const [audioDevices, setAudioDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isMediaPlaying, setIsMediaPlaying] = useState(false);
 
   // Widget config
   const { widgets, isVisible, toggleWidget, moveWidget, getSize, setSize, resetConfig } = useModuleConfig('volume', DEFAULT_WIDGETS, DEFAULT_SIZES);
-  const rightColumnWidth = getSize('rightColumnWidth', 320);
 
   const resolvedWidgetDefs = Object.fromEntries(
     Object.entries(WIDGET_DEFS).map(([id, def]) => [id, { ...def, label: t(def.labelKey) }])
@@ -369,6 +366,9 @@ function VolumeModule() {
     return 'var(--success)';
   };
 
+  // Circumference for SVG ring: 2 * PI * 52 ≈ 326.73
+  const KNOB_CIRCUMFERENCE = 326.73;
+
   if (isLoading) {
     return (
       <div className="volume-module">
@@ -379,150 +379,6 @@ function VolumeModule() {
       </div>
     );
   }
-
-  // Renderers pour les widgets
-  const leftRenderers = {
-    volumeDisplay: () => (
-      <div key="volumeDisplay" className="volume-display">
-        <button
-          className={`mute-btn ${muted ? 'muted' : ''}`}
-          onClick={handleToggleMute}
-          title={muted ? t('volume.activateSound') : t('volume.muteSound')}
-        >
-          {getVolumeIcon(volume, muted, 48)}
-        </button>
-        <div className="volume-value" style={{ color: getVolumeColor() }}>
-          {muted ? 'MUTE' : `${volume}%`}
-        </div>
-      </div>
-    ),
-    volumeBars: () => (
-      <div key="volumeBars" className="volume-bars">
-        {Array.from({ length: 20 }).map((_, i) => {
-          const barLevel = (i + 1) * 5;
-          const isActive = !muted && volume >= barLevel;
-          let barColor = 'var(--success)';
-          if (barLevel > 80) barColor = 'var(--danger)';
-          else if (barLevel > 60) barColor = 'var(--warning)';
-          return (
-            <div
-              key={i}
-              className={`volume-bar ${isActive ? 'active' : ''}`}
-              style={{
-                height: `${30 + i * 3}%`,
-                backgroundColor: isActive ? barColor : 'var(--bg-tertiary)'
-              }}
-              onClick={() => !muted && updateVolume(barLevel)}
-            />
-          );
-        })}
-      </div>
-    ),
-    visualizer: () => <AudioVisualizer />,
-    volumePresets: () => (
-      <div key="volumePresets" className="volume-presets">
-        {volumePresets.map((preset) => (
-          <button
-            key={preset}
-            className={`preset-btn ${volume === preset && !muted ? 'active' : ''}`}
-            onClick={() => updateVolume(preset)}
-            disabled={muted}
-          >
-            {preset}%
-          </button>
-        ))}
-      </div>
-    ),
-  };
-
-  const rightRenderers = {
-    deviceSelector: () => audioDevices.length > 0 ? (
-      <div key="deviceSelector" className="device-selector" ref={dropdownRef}>
-        <div className="device-selector-label">{t('volume.outputDevice')}</div>
-        <button
-          className={`device-dropdown-trigger ${dropdownOpen ? 'open' : ''}`}
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-        >
-          <Monitor size={16} />
-          <span className="device-dropdown-text">
-            {audioDevices.find(d => d.id === selectedDevice)?.name || t('volume.select')}
-          </span>
-          <ChevronDown size={16} className={`dropdown-chevron ${dropdownOpen ? 'rotated' : ''}`} />
-        </button>
-        {dropdownOpen && (
-          <div className="device-dropdown-menu">
-            {audioDevices.map((device) => (
-              <button
-                key={device.id}
-                className={`device-dropdown-item ${device.id === selectedDevice ? 'active' : ''}`}
-                onClick={() => handleDeviceChange(device.id)}
-              >
-                <span className="device-name">{device.name}</span>
-                {device.id === selectedDevice && (
-                  <span className="device-active-badge">{t('volume.active')}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    ) : null,
-    quickActions: () => (
-      <div key="quickActions" className="volume-actions">
-        <button
-          className={`action-btn ${muted ? 'active' : ''}`}
-          onClick={handleToggleMute}
-        >
-          <VolumeX size={18} />
-          <span>{t('volume.mute')}</span>
-        </button>
-        <button
-          className="action-btn"
-          onClick={() => updateVolume(Math.max(0, volume - 10))}
-          disabled={muted}
-        >
-          <Volume1 size={18} />
-          <span>-10%</span>
-        </button>
-        <button
-          className="action-btn"
-          onClick={() => updateVolume(Math.min(100, volume + 10))}
-          disabled={muted}
-        >
-          <Volume2 size={18} />
-          <span>+10%</span>
-        </button>
-      </div>
-    ),
-    mediaControls: () => (
-      <div key="mediaControls" className="media-section">
-        <div className="media-section-label">{t('volume.playbackControl')}</div>
-        <div className="media-controls">
-          <button
-            className="media-btn"
-            onClick={() => handleMediaAction('prev')}
-            title={t('volume.prevTrack')}
-          >
-            <SkipBack size={18} />
-          </button>
-          <button
-            className="media-btn play"
-            onClick={() => handleMediaAction('play-pause')}
-            title={t('volume.playPause')}
-          >
-            <Play size={20} />
-          </button>
-          <button
-            className="media-btn"
-            onClick={() => handleMediaAction('next')}
-            title={t('volume.nextTrack')}
-          >
-            <SkipForward size={18} />
-          </button>
-        </div>
-      </div>
-    ),
-  };
 
   if (showSettings) {
     return (
@@ -535,8 +391,6 @@ function VolumeModule() {
           onMove={moveWidget}
           onClose={() => setShowSettings(false)}
           onReset={resetConfig}
-          sizes={[{ key: 'rightColumnWidth', label: t('volume.rightColumnWidth'), min: 250, max: 450, step: 10, value: rightColumnWidth }]}
-          onSizeChange={setSize}
         />
       </div>
     );
@@ -560,29 +414,174 @@ function VolumeModule() {
         </div>
       </div>
 
-      {error && (
-        <div className="volume-error">
-          {error}
+      {error && <div className="volume-error">{error}</div>}
+
+      {/* Output Device */}
+      {isVisible('deviceSelector') && audioDevices.length > 0 && (
+        <div className="deck-output" ref={dropdownRef}>
+          <div className="deck-label">{t('volume.outputDevice')}</div>
+          <button
+            className={`device-dropdown-trigger ${dropdownOpen ? 'open' : ''}`}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <Monitor size={16} />
+            <span className="device-dropdown-text">
+              {audioDevices.find(d => d.id === selectedDevice)?.name || t('volume.select')}
+            </span>
+            <ChevronDown size={16} className={`dropdown-chevron ${dropdownOpen ? 'rotated' : ''}`} />
+          </button>
+          {dropdownOpen && (
+            <div className="device-dropdown-menu">
+              {audioDevices.map((device) => (
+                <button
+                  key={device.id}
+                  className={`device-dropdown-item ${device.id === selectedDevice ? 'active' : ''}`}
+                  onClick={() => handleDeviceChange(device.id)}
+                >
+                  <span className="device-name">{device.name}</span>
+                  {device.id === selectedDevice && (
+                    <span className="device-active-badge">{t('volume.active')}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Layout horizontal principal */}
-      <div className="volume-content">
-        {/* Colonne gauche - Volume principal */}
-        <div className="volume-left">
-          {widgets
-            .filter(w => LEFT_WIDGETS.includes(w.id) && w.visible && leftRenderers[w.id])
-            .map(w => leftRenderers[w.id]())
-          }
+      <div className="deck-surface">
+        {/* Main: Knob + Channel Strip */}
+        <div className="deck-main">
+          {isVisible('volumeDisplay') && (
+            <div className="deck-knob-section">
+              <div className="deck-knob">
+                <svg viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg-tertiary)" strokeWidth="8" />
+                  <circle
+                    cx="60" cy="60" r="52" fill="none"
+                    stroke={getVolumeColor()}
+                    strokeWidth="8"
+                    strokeDasharray={`${(volume / 100) * KNOB_CIRCUMFERENCE} ${KNOB_CIRCUMFERENCE}`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 60 60)"
+                    style={{ filter: `drop-shadow(0 0 6px ${getVolumeColor()})`, transition: 'stroke-dasharray 0.3s ease' }}
+                  />
+                </svg>
+                <div className="deck-knob-center">
+                  <div className="deck-knob-value" style={{ color: getVolumeColor() }}>
+                    {muted ? 'MUTE' : `${volume}%`}
+                  </div>
+                  <div className="deck-knob-icon">
+                    {getVolumeIcon(volume, muted, 20)}
+                  </div>
+                </div>
+              </div>
+              <button
+                className={`deck-mute-btn ${muted ? 'muted' : ''}`}
+                onClick={handleToggleMute}
+                title={muted ? t('volume.activateSound') : t('volume.muteSound')}
+              >
+                {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+              </button>
+            </div>
+          )}
+
+          <div className="deck-channel">
+            {isVisible('volumeBars') && (
+              <div className="deck-vu">
+                <div className="deck-label">VU METER</div>
+                <div className="deck-vu-bars">
+                  {Array.from({ length: 20 }).map((_, i) => {
+                    const barLevel = (i + 1) * 5;
+                    const isBarActive = !muted && volume >= barLevel;
+                    let barColor = 'var(--success)';
+                    if (barLevel > 80) barColor = 'var(--danger)';
+                    else if (barLevel > 60) barColor = 'var(--warning)';
+                    return (
+                      <div
+                        key={i}
+                        className={`deck-vu-segment ${isBarActive ? 'active' : ''}`}
+                        style={{
+                          height: `${30 + i * 3.5}%`,
+                          backgroundColor: isBarActive ? barColor : 'var(--bg-tertiary)'
+                        }}
+                        onClick={() => !muted && updateVolume(barLevel)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {isVisible('volumePresets') && (
+              <div className="deck-presets">
+                <div className="deck-label">{t('volume.presets')}</div>
+                <div className="deck-presets-row">
+                  {volumePresets.map((preset) => (
+                    <button
+                      key={preset}
+                      className={`deck-preset ${volume === preset && !muted ? 'active' : ''}`}
+                      onClick={() => updateVolume(preset)}
+                      disabled={muted}
+                    >
+                      {preset}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isVisible('visualizer') && (
+              <div className="deck-visualizer">
+                <AudioVisualizer />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Colonne droite - Périphérique + Actions + Média */}
-        <div className="volume-right" style={{ width: `${rightColumnWidth}px` }}>
-          {widgets
-            .filter(w => RIGHT_WIDGETS.includes(w.id) && w.visible && rightRenderers[w.id])
-            .map(w => rightRenderers[w.id]())
-          }
-        </div>
+        {/* Transport Row */}
+        {(isVisible('mediaControls') || isVisible('quickActions')) && (
+          <div className="deck-transport">
+            {isVisible('mediaControls') && (
+              <div className="deck-transport-group">
+                <div className="deck-label">{t('volume.playbackControl')}</div>
+                <div className="deck-transport-btns">
+                  <button className="deck-btn" onClick={() => handleMediaAction('prev')} title={t('volume.prevTrack')}>
+                    <SkipBack size={18} />
+                  </button>
+                  <button className="deck-btn play-btn" onClick={() => { handleMediaAction('play-pause'); setIsMediaPlaying(prev => !prev); }}
+                    title={isMediaPlaying ? t('volume.pause') : t('volume.playPause')}>
+                    {isMediaPlaying ? <Pause size={20} /> : <Play size={20} />}
+                  </button>
+                  <button className="deck-btn" onClick={() => handleMediaAction('next')} title={t('volume.nextTrack')}>
+                    <SkipForward size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isVisible('quickActions') && (
+              <div className="deck-transport-group">
+                <div className="deck-label">{t('volume.quickActions')}</div>
+                <div className="deck-transport-btns">
+                  <button className="deck-action" onClick={() => updateVolume(Math.max(0, volume - 10))} disabled={muted}>
+                    <Volume1 size={18} />
+                    <span>-10%</span>
+                  </button>
+                  <button className={`deck-action ${muted ? 'active' : ''}`} onClick={handleToggleMute}>
+                    <VolumeX size={18} />
+                    <span>{t('volume.mute')}</span>
+                  </button>
+                  <button className="deck-action" onClick={() => updateVolume(Math.min(100, volume + 10))} disabled={muted}>
+                    <Volume2 size={18} />
+                    <span>+10%</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

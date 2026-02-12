@@ -222,10 +222,13 @@
 /* Modal */
 .streamdeck-modal {
   width: 420px;
+  max-height: 90vh;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .streamdeck-modal-header {
@@ -264,6 +267,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Preview */
@@ -593,6 +599,51 @@
   color: var(--accent-primary);
 }
 
+.streamdeck-profile-add-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.streamdeck-profile-add-buttons .streamdeck-profile-add-btn {
+  flex: 1;
+}
+
+.streamdeck-profile-ha-row {
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  gap: 8px;
+  color: var(--accent-primary);
+}
+
+.streamdeck-profile-ha-label {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streamdeck-profile-ha-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 8px;
+  margin-top: 2px;
+}
+
+.streamdeck-profile-ha-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 /* Confirmation Overlay */
 .streamdeck-confirm-overlay {
   position: fixed;
@@ -647,4 +698,270 @@
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+/* Home Assistant */
+.streamdeck-ha-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.streamdeck-ha-loading .spinning {
+  animation: sd-spin 1s linear infinite;
+}
+
+@keyframes sd-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.streamdeck-ha-error {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 14px;
+}
+
+/* HA Entity Picker — style Dashboard HA OS */
+.ha-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ha-picker-domain-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ha-picker-domain-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ha-picker-domain-tab:hover {
+  color: var(--text-primary);
+}
+
+.ha-picker-domain-tab.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.ha-picker-entity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.ha-picker-entity-grid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ha-picker-entity-grid::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.ha-picker-entity-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.ha-picker-entity-tile:hover {
+  border-color: var(--text-muted);
+}
+
+.ha-picker-entity-tile.selected {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.ha-picker-entity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.ha-picker-entity-icon.off {
+  background: rgba(96, 96, 112, 0.2);
+  color: #666;
+}
+
+.ha-picker-entity-icon.on {
+  background: rgba(255, 193, 7, 0.2);
+  color: #FFC107;
+}
+
+.ha-picker-entity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ha-picker-entity-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ha-picker-entity-state {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ha-picker-entity-state.on {
+  color: #FFC107;
+}
+
+.ha-picker-entity-state.off {
+  color: #666;
+}
+
+.ha-picker-section-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ha-picker-service-list {
+  display: flex;
+  gap: 6px;
+}
+
+.ha-picker-service-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.ha-picker-service-btn:hover {
+  color: var(--text-primary);
+}
+
+.ha-picker-service-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.ha-picker-light-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.ha-picker-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ha-picker-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.ha-picker-color-row input[type="color"] {
+  width: 36px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.ha-picker-color-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.ha-picker-brightness-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ha-picker-brightness-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  min-width: 80px;
+}
+
+.ha-picker-brightness-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-primary);
+}
+
+.ha-picker-brightness-value {
+  font-size: 13px;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: right;
+}
+
+.ha-picker-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
 }

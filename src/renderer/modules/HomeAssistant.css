@@ -92,15 +92,6 @@
   flex-shrink: 0;
 }
 
-/* Grille des cartes */
-.ha-grid {
-  display: grid;
-  gap: 12px;
-  flex: 1;
-  overflow-y: auto;
-  align-content: start;
-}
-
 /* Header minimal quand statusBar est masqué */
 .ha-header-minimal {
   display: flex;
@@ -109,157 +100,304 @@
   flex-shrink: 0;
 }
 
-/* Carte de domaine */
-.ha-card {
+/* ===== Domain Filter Tabs ===== */
+.ha-domain-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.ha-domain-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ha-domain-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.ha-domain-tab.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ===== Tile Grid ===== */
+.ha-tile-grid {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  align-content: start;
+  padding-bottom: 4px;
+}
+
+.ha-tile-grid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ha-tile-grid::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+/* ===== Individual Tile ===== */
+.ha-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
-  max-height: 580px;
+  transition: all 0.15s ease;
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.card-header svg {
-  color: var(--accent-primary);
-  flex-shrink: 0;
-}
-
-.card-header span:first-of-type {
-  flex: 1;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.card-count {
-  font-size: 15px;
-  color: var(--text-muted);
-  padding: 4px 12px;
-  background: var(--bg-secondary);
-  border-radius: 10px;
-}
-
-.card-content {
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* Ligne d'entité */
-.entity-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  transition: background 0.15s ease;
-}
-
-.entity-row:hover {
-  background: var(--bg-tertiary);
-}
-
-.entity-row svg {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.entity-name {
-  flex: 1;
-  font-size: 16px;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.entity-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--accent-secondary);
-  text-align: right;
-  max-width: 140px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.entity-state {
-  font-size: 15px;
-  color: var(--text-muted);
-  text-transform: capitalize;
-}
-
-/* Toggle */
-.entity-row.toggle {
+.ha-tile.toggleable {
   cursor: pointer;
 }
 
-.entity-row.toggle.on {
-  background: rgba(34, 197, 94, 0.1);
+.ha-tile:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-muted);
 }
 
-.entity-row.toggle.on svg {
-  color: var(--success);
+.ha-tile.toggleable.on {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-.entity-row.toggle.off svg {
+.ha-tile.toggleable.on:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ===== Tile Icon Circle ===== */
+.ha-tile-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+/* ===== Tile Name ===== */
+.ha-tile-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* ===== Tile State Text ===== */
+.ha-tile-state {
+  font-size: 12px;
   color: var(--text-muted);
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Capteurs */
-.entity-row.sensor svg {
-  color: var(--accent-secondary);
+.ha-tile-state.on {
+  color: var(--text-secondary);
 }
 
-/* Bouton masquer */
-.hide-btn {
+/* ===== Tile Hide Button ===== */
+.ha-tile-hide {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   display: none;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: transparent;
-  border: none;
+  width: 20px;
+  height: 20px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
-  flex-shrink: 0;
   padding: 0;
+  z-index: 2;
 }
 
-.entity-row:hover .hide-btn {
+.ha-tile:hover .ha-tile-hide {
   display: flex;
 }
 
-.hide-btn:hover {
+.ha-tile-hide:hover {
   background: var(--danger);
+  border-color: var(--danger);
   color: white;
 }
 
-/* Plus d'entités */
-.more-entities {
-  padding: 8px 10px;
-  text-align: center;
+/* ===== Cover Controls Inside Tile ===== */
+.ha-tile-cover-controls {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.ha-tile-cover-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ha-tile-cover-controls button:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.ha-tile-cover-controls button:first-child:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ha-tile-cover-controls button:last-child:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.ha-tile-cover-controls button:nth-child(2):hover {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+/* ===== Color Button on Tile ===== */
+.ha-tile-color-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ha-tile-color-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--text-muted);
+}
+
+/* ===== Color Popover ===== */
+.ha-color-popover {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 210px;
+}
+
+.ha-color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ha-color-picker-row input[type="color"] {
+  width: 40px;
+  height: 40px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  background: none;
+  padding: 0;
+}
+
+.ha-color-picker-row input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.ha-color-picker-row input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.ha-color-preview {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.ha-color-hex {
   font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+}
+
+.ha-brightness-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ha-brightness-row svg {
   color: var(--text-muted);
-  border-top: 1px solid var(--border-color);
-  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.ha-brightness-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-primary);
+  height: 6px;
+}
+
+.ha-brightness-row span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: right;
 }
 
 /* Setup initial */
@@ -496,78 +634,6 @@
 
 .ha-empty small {
   font-size: 13px;
-}
-
-/* Scrollbar */
-.ha-grid::-webkit-scrollbar,
-.card-content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.ha-grid::-webkit-scrollbar-thumb,
-.card-content::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 2px;
-}
-
-/* Couleurs par domaine */
-.ha-card.light .card-header svg { color: #f59e0b; }
-.ha-card.switch .card-header svg { color: #3b82f6; }
-.ha-card.climate .card-header svg { color: #ef4444; }
-.ha-card.cover .card-header svg { color: #8b5cf6; }
-.ha-card.fan .card-header svg { color: #06b6d4; }
-.ha-card.sensor .card-header svg { color: #10b981; }
-.ha-card.binary_sensor .card-header svg { color: #f97316; }
-.ha-card.automation .card-header svg { color: #eab308; }
-
-/* Cover controls (volets/stores) */
-.entity-row.cover-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cover-controls {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.cover-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.cover-btn:hover {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.cover-btn.open:hover {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: var(--success);
-  color: var(--success);
-}
-
-.cover-btn.close:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.cover-btn.stop:hover {
-  background: rgba(251, 191, 36, 0.2);
-  border-color: var(--warning);
-  color: var(--warning);
 }
 
 /* Widget toggles dans settings HA */

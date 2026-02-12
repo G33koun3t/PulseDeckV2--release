@@ -202,6 +202,39 @@
   border-color: var(--accent-primary);
 }
 
+/* Tab wrapper avec bouton suppression */
+.news-tab-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.news-tab-delete {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--danger);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  transition: all 0.15s ease;
+}
+
+.news-tab-wrapper:hover .news-tab-delete {
+  display: flex;
+}
+
+.news-tab-delete:hover {
+  transform: scale(1.2);
+}
+
 /* Grille de cartes horizontales */
 .news-grid {
   flex: 1;
