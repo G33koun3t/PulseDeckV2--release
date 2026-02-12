@@ -184,6 +184,7 @@ function NewsModule() {
   });
   const refreshTimer = useRef(null);
   const cryptoTimer = useRef(null);
+  const prevLangRef = useRef(lang);
 
   // Catégories dynamiques depuis les feeds
   const categories = useMemo(() => {
@@ -207,10 +208,10 @@ function NewsModule() {
 
   // Quand la langue change et que les feeds ne sont pas personnalisés, basculer
   useEffect(() => {
-    const savedLang = localStorage.getItem('news_feeds_lang');
-    if (savedLang && savedLang !== lang && !isCustomFeeds) {
+    if (prevLangRef.current !== lang && !isCustomFeeds) {
       setFeeds(getDefaultFeeds(lang));
     }
+    prevLangRef.current = lang;
   }, [lang, isCustomFeeds]);
 
   // Crypto ticker — fetch toutes les 2 min
