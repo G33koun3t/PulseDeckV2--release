@@ -1352,6 +1352,35 @@
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
+/* Footer liens légaux */
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+  flex-shrink: 0;
+}
+
+.settings-footer a {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+  text-decoration: none;
+}
+
+.settings-footer a:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+.settings-footer-sep {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
 /* Animation spin pour le loader */
 .spin {
   animation: spin 1s linear infinite;

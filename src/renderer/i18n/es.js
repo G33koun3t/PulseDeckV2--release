@@ -406,6 +406,8 @@ export default {
     targetDisplay: 'Pantalla objetivo',
     primaryDisplay: 'Principal',
     currentDisplay: 'Actual',
+    privacyPolicy: 'Política de privacidad',
+    termsOfUse: 'Condiciones de uso',
   },
   launcher: {
     title: 'Lanzador',

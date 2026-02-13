@@ -917,6 +917,21 @@ function SettingsModule() {
             </>
           )}
         </div>
+
+        {/* Footer liens légaux */}
+        <div className="settings-footer">
+          <a onClick={() => window.electronAPI?.openExternal('https://g33koun3t.github.io/Monitoring-Dashboard/privacy-policy.html')}>
+            {t('settings.privacyPolicy')}
+          </a>
+          <span className="settings-footer-sep">|</span>
+          <a onClick={() => window.electronAPI?.openExternal('https://g33koun3t.github.io/Monitoring-Dashboard/terms-of-use.html')}>
+            {t('settings.termsOfUse')}
+          </a>
+          <span className="settings-footer-sep">|</span>
+          <a onClick={() => window.electronAPI?.openExternal('mailto:contact.pulsedeck@gmail.com')}>
+            contact.pulsedeck@gmail.com
+          </a>
+        </div>
       </div>
     </div>
   );

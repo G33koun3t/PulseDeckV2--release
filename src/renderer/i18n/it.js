@@ -406,6 +406,8 @@ export default {
     targetDisplay: 'Schermo di destinazione',
     primaryDisplay: 'Principale',
     currentDisplay: 'Attuale',
+    privacyPolicy: 'Informativa sulla privacy',
+    termsOfUse: 'Condizioni di utilizzo',
   },
   launcher: {
     title: 'Launcher',

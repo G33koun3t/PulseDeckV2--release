@@ -406,6 +406,8 @@ export default {
     targetDisplay: 'ターゲットディスプレイ',
     primaryDisplay: 'メイン',
     currentDisplay: '現在',
+    privacyPolicy: 'プライバシーポリシー',
+    termsOfUse: '利用規約',
   },
   launcher: {
     title: 'ランチャー',

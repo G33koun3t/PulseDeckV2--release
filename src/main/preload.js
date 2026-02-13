@@ -98,6 +98,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDisplays: () => ipcRenderer.invoke('get-displays'),
   setTargetDisplay: (displayId) => ipcRenderer.invoke('set-target-display', displayId),
 
+  // Backup des paramètres (survit aux mises à jour)
+  saveAppSettingsBackup: (data) => ipcRenderer.invoke('save-app-settings-backup', data),
+  loadAppSettingsBackup: () => ipcRenderer.invoke('load-app-settings-backup'),
+
   // Mises à jour automatiques
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),

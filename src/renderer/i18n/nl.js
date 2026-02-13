@@ -406,6 +406,8 @@ export default {
     targetDisplay: 'Doelscherm',
     primaryDisplay: 'Primair',
     currentDisplay: 'Huidig',
+    privacyPolicy: 'Privacybeleid',
+    termsOfUse: 'Gebruiksvoorwaarden',
   },
   launcher: {
     title: 'Launcher',

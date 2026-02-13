@@ -434,6 +434,24 @@ function saveDisplaySettings(settings) {
   fs.writeFileSync(getDisplaySettingsPath(), JSON.stringify(settings, null, 2));
 }
 
+// Backup des paramètres d'application (survit aux mises à jour NSIS)
+function getAppSettingsBackupPath() {
+  return path.join(app.getPath('userData'), 'app-settings-backup.json');
+}
+
+function saveAppSettingsBackup(data) {
+  try {
+    fs.writeFileSync(getAppSettingsBackupPath(), JSON.stringify(data, null, 2));
+  } catch {}
+}
+
+function loadAppSettingsBackup() {
+  try {
+    const data = fs.readFileSync(getAppSettingsBackupPath(), 'utf8');
+    return JSON.parse(data);
+  } catch { return null; }
+}
+
 function findTargetDisplay() {
   const displays = screen.getAllDisplays();
   const prefs = loadDisplaySettings();
@@ -1480,6 +1498,16 @@ function registerIpcHandlers() {
     }
 
     return { success: true };
+  });
+
+  // Backup/restauration des paramètres (survit aux mises à jour NSIS)
+  ipcMain.handle('save-app-settings-backup', (_event, data) => {
+    saveAppSettingsBackup(data);
+    return { success: true };
+  });
+
+  ipcMain.handle('load-app-settings-backup', () => {
+    return loadAppSettingsBackup();
   });
 
 }

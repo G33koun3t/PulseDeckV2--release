@@ -406,6 +406,8 @@ export default {
     targetDisplay: 'Ekran docelowy',
     primaryDisplay: 'Główny',
     currentDisplay: 'Bieżący',
+    privacyPolicy: 'Polityka prywatności',
+    termsOfUse: 'Warunki użytkowania',
   },
   launcher: {
     title: 'Launcher',

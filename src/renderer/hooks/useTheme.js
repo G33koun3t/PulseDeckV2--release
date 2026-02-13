@@ -117,25 +117,26 @@ export const DEFAULT_SETTINGS = {
   gamingMode: true, // détection automatique du mode gaming
 };
 
+function parseSettings(parsed) {
+  return {
+    theme: {
+      preset: parsed.theme?.preset || DEFAULT_SETTINGS.theme.preset,
+      colors: { ...DEFAULT_SETTINGS.theme.colors, ...parsed.theme?.colors },
+    },
+    layout: { ...DEFAULT_SETTINGS.layout, ...parsed.layout },
+    language: parsed.language || 'en',
+    sidebarOrder: parsed.sidebarOrder || null,
+    hiddenModules: parsed.hiddenModules || [],
+    gamingMode: parsed.gamingMode ?? true,
+  };
+}
+
 function loadSettings() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return { ...DEFAULT_SETTINGS };
-    const parsed = JSON.parse(data);
-    return {
-      theme: {
-        preset: parsed.theme?.preset || DEFAULT_SETTINGS.theme.preset,
-        colors: { ...DEFAULT_SETTINGS.theme.colors, ...parsed.theme?.colors },
-      },
-      layout: { ...DEFAULT_SETTINGS.layout, ...parsed.layout },
-      language: parsed.language || 'en',
-      sidebarOrder: parsed.sidebarOrder || null,
-      hiddenModules: parsed.hiddenModules || [],
-      gamingMode: parsed.gamingMode ?? true,
-    };
-  } catch {
-    return { ...DEFAULT_SETTINGS };
-  }
+    if (data) return parseSettings(JSON.parse(data));
+  } catch {}
+  return null;
 }
 
 function applyColors(colors) {
@@ -164,16 +165,38 @@ const SETTINGS_CHANGED_EVENT = 'app-settings-changed';
 
 export default function useTheme() {
   const [settings, setSettings] = useState(() => {
-    const s = loadSettings();
+    const s = loadSettings() || { ...DEFAULT_SETTINGS };
     applyColors(s.theme.colors);
     applyLayout(s.layout);
     return s;
   });
 
+  // Au montage : restaurer depuis le backup fichier si localStorage est vide,
+  // ou créer le backup initial si localStorage a des données mais pas encore de backup
+  useEffect(() => {
+    if (!window.electronAPI?.loadAppSettingsBackup) return;
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      // localStorage vide → restaurer depuis le backup fichier
+      window.electronAPI.loadAppSettingsBackup().then(backup => {
+        if (backup) {
+          const restored = parseSettings(backup);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+          applyColors(restored.theme.colors);
+          applyLayout(restored.layout);
+          setSettings(restored);
+        }
+      });
+    } else {
+      // localStorage existe → s'assurer qu'un backup fichier existe aussi
+      window.electronAPI.saveAppSettingsBackup(JSON.parse(data));
+    }
+  }, []);
+
   // Écouter les changements depuis d'autres composants
   useEffect(() => {
     const handler = () => {
-      const fresh = loadSettings();
+      const fresh = loadSettings() || { ...DEFAULT_SETTINGS };
       applyColors(fresh.theme.colors);
       applyLayout(fresh.layout);
       setSettings(fresh);
@@ -185,6 +208,10 @@ export default function useTheme() {
   const updateSettings = useCallback((newSettings) => {
     setSettings(newSettings);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+    // Sauvegarder aussi dans un fichier (survit aux mises à jour)
+    if (window.electronAPI?.saveAppSettingsBackup) {
+      window.electronAPI.saveAppSettingsBackup(newSettings);
+    }
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
   }, []);
 
