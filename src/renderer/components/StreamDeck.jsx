@@ -77,7 +77,16 @@ function loadButtons() {
 }
 
 function saveButtons(buttons) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(buttons));
+  // Sauvegarder sur disque via IPC (fiable, pas de limite de taille)
+  if (window.electronAPI?.saveLauncherButtons) {
+    window.electronAPI.saveLauncherButtons(buttons).catch(() => {});
+  }
+  // Cache localStorage (peut échouer si trop gros avec images base64)
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buttons));
+  } catch (e) {
+    console.warn('localStorage save failed (quota?):', e.message);
+  }
 }
 
 function getGridSettings() {
@@ -272,6 +281,16 @@ function StreamDeck() {
   const [haError, setHaError] = useState(null);
   const [profileHaPicker, setProfileHaPicker] = useState(null);
   const modalRef = useRef(null);
+
+  // Charger depuis le fichier disque au montage (source de vérité)
+  useEffect(() => {
+    if (!window.electronAPI?.loadLauncherButtons) return;
+    window.electronAPI.loadLauncherButtons().then((result) => {
+      if (result.success && Array.isArray(result.buttons) && result.buttons.length > 0) {
+        setButtons(result.buttons);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Écouter les changements de settings (grille)
   useEffect(() => {

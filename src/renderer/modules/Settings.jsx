@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Settings, RotateCcw, ChevronUp, ChevronDown, Check,
   Monitor, Sun, Calendar, Home, Volume2, Wrench,
-  Newspaper, ClipboardList, Video, BookOpen,
+  Newspaper, ClipboardList, Video, BookOpen, Mic,
   Eye, EyeOff, Plus, Trash2, Pencil, X, Save, Globe, Shield, ShoppingCart,
   MonitorSmartphone, Download, RefreshCw, CheckCircle, AlertCircle, Loader
 } from 'lucide-react';
@@ -12,6 +12,22 @@ import { useTranslation, LOCALE_META } from '../i18n';
 import { useLicense } from '../contexts/LicenseContext';
 import { STORE_URL } from '../config';
 import './Settings.css';
+
+// Icône Docker (baleine avec conteneurs)
+function DockerIcon({ size = 24, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="7" y="5" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="5" width="3" height="2.5" rx="0.3" />
+      <rect x="7" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="14" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="2" width="3" height="2.5" rx="0.3" />
+      <path d="M4 11.5c0 0 0.5-1 2-1h13c1.5 0 2.5 1 3 2s0 3-1 4-3 2.5-6.5 2.5H10c-4 0-6.5-2-7-4S3 11.5 4 11.5z" />
+      <circle cx="19" cy="13" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 // Icônes des modules natifs
 const MODULE_ICONS = {
@@ -24,12 +40,15 @@ const MODULE_ICONS = {
   news: Newspaper,
   clipboard: ClipboardList,
   obs: Video,
+  voicecommands: Mic,
+  docker: DockerIcon,
   settings: Settings,
 };
 
 const DEFAULT_ORDER = [
   'monitoring', 'weather', 'calendar', 'homeassistant',
-  'volume', 'timer', 'news', 'clipboard', 'obs', 'settings'
+  'volume', 'timer', 'news', 'clipboard', 'obs',
+  'voicecommands', 'docker', 'settings'
 ];
 
 const MAX_WEBVIEWS = 5;
@@ -203,10 +222,20 @@ function SettingsModule() {
   const getCurrentOrder = () => {
     const baseOrder = settings.sidebarOrder || DEFAULT_ORDER;
     const webviewIds = customWebviews.map(w => w.id);
-    const missingIds = webviewIds.filter(id => !baseOrder.includes(id));
-    const allValidIds = [...Object.keys(MODULE_ICONS), ...webviewIds];
+    const nativeIds = Object.keys(MODULE_ICONS);
+    const allValidIds = [...nativeIds, ...webviewIds];
     const cleanOrder = baseOrder.filter(id => allValidIds.includes(id));
-    return [...cleanOrder, ...missingIds];
+    // Ajouter les modules natifs et webviews manquants (nouveaux modules)
+    const missingNative = nativeIds.filter(id => !cleanOrder.includes(id));
+    const missingWebviews = webviewIds.filter(id => !cleanOrder.includes(id));
+    // Insérer les natifs manquants avant 'settings', les webviews après
+    const settingsIdx = cleanOrder.indexOf('settings');
+    if (settingsIdx >= 0 && missingNative.length > 0) {
+      cleanOrder.splice(settingsIdx, 0, ...missingNative);
+    } else {
+      cleanOrder.push(...missingNative);
+    }
+    return [...cleanOrder, ...missingWebviews];
   };
 
   const currentOrder = getCurrentOrder();

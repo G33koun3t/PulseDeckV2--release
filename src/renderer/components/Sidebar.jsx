@@ -9,10 +9,30 @@ import {
   Newspaper,
   ClipboardList,
   Video,
+  Mic,
   Settings,
   Minus,
   X,
 } from 'lucide-react';
+
+// Icône Docker (baleine avec conteneurs) — style lucide
+function DockerIcon({ size = 24, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      {/* Conteneurs sur le dos de la baleine */}
+      <rect x="7" y="5" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="5" width="3" height="2.5" rx="0.3" />
+      <rect x="7" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="14" y="8" width="3" height="2.5" rx="0.3" />
+      <rect x="10.5" y="2" width="3" height="2.5" rx="0.3" />
+      {/* Corps de la baleine */}
+      <path d="M4 11.5c0 0 0.5-1 2-1h13c1.5 0 2.5 1 3 2s0 3-1 4-3 2.5-6.5 2.5H10c-4 0-6.5-2-7-4S3 11.5 4 11.5z" />
+      {/* Oeil */}
+      <circle cx="19" cy="13" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 import { getWebviewIcon } from '../utils/webviewIcons';
 import { useTranslation } from '../i18n';
 import { useLicense } from '../contexts/LicenseContext';
@@ -28,6 +48,8 @@ const menuItems = [
   { id: 'news', icon: Newspaper, labelKey: 'sidebar.news' },
   { id: 'clipboard', icon: ClipboardList, labelKey: 'sidebar.clipboard' },
   { id: 'obs', icon: Video, labelKey: 'sidebar.obs' },
+  { id: 'voicecommands', icon: Mic, labelKey: 'sidebar.voicecommands' },
+  { id: 'docker', icon: DockerIcon, labelKey: 'sidebar.docker' },
 ];
 
 // Settings toujours en dernière position

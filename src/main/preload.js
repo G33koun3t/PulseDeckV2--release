@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectImage: () => ipcRenderer.invoke('select-image'),
   exportLauncherConfig: (config) => ipcRenderer.invoke('export-launcher-config', config),
   importLauncherConfig: () => ipcRenderer.invoke('import-launcher-config'),
+  saveLauncherButtons: (buttons) => ipcRenderer.invoke('save-launcher-buttons', buttons),
+  loadLauncherButtons: () => ipcRenderer.invoke('load-launcher-buttons'),
   systemAction: (actionId) => ipcRenderer.invoke('system-action', actionId),
 
   // Flux RSS
@@ -101,6 +103,42 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Backup des paramètres (survit aux mises à jour)
   saveAppSettingsBackup: (data) => ipcRenderer.invoke('save-app-settings-backup', data),
   loadAppSettingsBackup: () => ipcRenderer.invoke('load-app-settings-backup'),
+
+  // Backup générique du localStorage (toutes les configs modules)
+  saveLocalStorageBackup: (data) => ipcRenderer.invoke('save-local-storage-backup', data),
+  loadLocalStorageBackup: () => ipcRenderer.invoke('load-local-storage-backup'),
+
+  // Commandes vocales
+  startVoice: (lang) => ipcRenderer.invoke('start-voice', lang),
+  stopVoice: () => ipcRenderer.invoke('stop-voice'),
+  getVoiceStatus: () => ipcRenderer.invoke('get-voice-status'),
+  executeVoiceCommand: (intent) => ipcRenderer.invoke('execute-voice-command', intent),
+  parseVoiceCommand: (text, lang) => ipcRenderer.invoke('parse-voice-command', text, lang),
+  getVoiceConfig: () => ipcRenderer.invoke('get-voice-config'),
+  setVoiceConfig: (config) => ipcRenderer.invoke('set-voice-config', config),
+  onVoiceResult: (callback) => {
+    ipcRenderer.on('voice-result', (event, data) => callback(data));
+  },
+  onVoiceStatus: (callback) => {
+    ipcRenderer.on('voice-status', (event, data) => callback(data));
+  },
+  onVoiceObsCommand: (callback) => {
+    ipcRenderer.on('voice-obs-command', (event, data) => callback(data));
+  },
+  sendVoiceAudio: (base64) => ipcRenderer.send('voice-audio-data', base64),
+
+  // Docker
+  dockerGetHosts: () => ipcRenderer.invoke('docker-get-hosts'),
+  dockerSaveHosts: (hosts) => ipcRenderer.invoke('docker-save-hosts', hosts),
+  dockerConnect: (hostId) => ipcRenderer.invoke('docker-connect', hostId),
+  dockerDisconnect: (hostId) => ipcRenderer.invoke('docker-disconnect', hostId),
+  dockerTestConnection: (config) => ipcRenderer.invoke('docker-test-connection', config),
+  dockerListContainers: (hostId) => ipcRenderer.invoke('docker-list-containers', hostId),
+  dockerGetStats: (hostId) => ipcRenderer.invoke('docker-get-stats', hostId),
+  dockerInspect: (hostId, containerId) => ipcRenderer.invoke('docker-inspect', hostId, containerId),
+  dockerLogs: (hostId, containerId, tail) => ipcRenderer.invoke('docker-logs', hostId, containerId, tail),
+  dockerAction: (hostId, containerId, action) => ipcRenderer.invoke('docker-action', hostId, containerId, action),
+  dockerSelectSshKey: () => ipcRenderer.invoke('docker-select-ssh-key'),
 
   // Mises à jour automatiques
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

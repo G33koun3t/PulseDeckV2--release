@@ -14,6 +14,8 @@ const { google } = require('googleapis');
 const licenseModule = require('./license');
 const guide = require('./guide');
 const { initUpdater, registerUpdaterIpc } = require('./updater');
+const { initVoice, registerVoiceIpc, stopListening: stopVoiceListening } = require('./voice');
+const { initDocker, registerDockerIpc, stopDocker } = require('./docker');
 const speedTest = require('speedtest-net');
 
 
@@ -328,7 +330,7 @@ function startOgWorker() {
   });
 
   ogWorker.on('exit', (code) => {
-    if (code !== 0) {
+    if (code !== 0 && !isQuitting) {
       console.log(`[OG Worker] Exited with code ${code}, restarting...`);
       setTimeout(startOgWorker, 1000);
     }
@@ -377,8 +379,8 @@ function startMonitoringWorker() {
 
   monitoringWorker.on('exit', (code) => {
     console.log(`Monitoring worker exited with code ${code}`);
-    // Redémarrer automatiquement si crash (pas un arrêt volontaire)
-    if (code !== 0 && mainWindow && !mainWindow.isDestroyed()) {
+    // Redémarrer automatiquement si crash (pas un arrêt volontaire, pas en fermeture)
+    if (code !== 0 && !isQuitting && mainWindow && !mainWindow.isDestroyed()) {
       console.log('Restarting monitoring worker...');
       setTimeout(startMonitoringWorker, 2000);
     }
@@ -411,10 +413,18 @@ function startMonitoringWorker() {
   });
 }
 
+let isQuitting = false;
+
 function stopMonitoringWorker() {
   if (monitoringWorker) {
-    monitoringWorker.send({ type: 'stop' });
+    const worker = monitoringWorker;
     monitoringWorker = null;
+    try { worker.send({ type: 'stop' }); } catch {}
+    // Forcer le kill après 2s si le processus ne s'arrête pas
+    const killTimeout = setTimeout(() => {
+      try { worker.kill('SIGKILL'); } catch {}
+    }, 2000);
+    worker.on('exit', () => clearTimeout(killTimeout));
   }
 }
 
@@ -543,7 +553,7 @@ function createWindow() {
           " style-src 'self' 'unsafe-inline';" +
           " img-src 'self' data: https: file:;" +
           " media-src 'self' mediastream: blob:;" +
-          " connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com ws://localhost:* ws://127.0.0.1:*;"
+          " connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com ws://localhost:* ws://127.0.0.1:* https://*.google.com https://*.googleapis.com wss://*.google.com;"
         ],
       },
     });
@@ -1007,6 +1017,32 @@ function registerIpcHandlers() {
       }
       return { success: true, config };
     } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Lanceur - Sauvegarder les boutons sur disque (fiable, pas de limite de taille)
+  const launcherConfigPath = path.join(app.getPath('userData'), 'launcher-buttons.json');
+  ipcMain.handle('save-launcher-buttons', (_event, buttons) => {
+    try {
+      fs.writeFileSync(launcherConfigPath, JSON.stringify(buttons), 'utf8');
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur sauvegarde lanceur:', error.message);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('load-launcher-buttons', () => {
+    try {
+      if (fs.existsSync(launcherConfigPath)) {
+        const data = fs.readFileSync(launcherConfigPath, 'utf8');
+        const buttons = JSON.parse(data);
+        if (Array.isArray(buttons)) return { success: true, buttons };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error('Erreur chargement lanceur:', error.message);
       return { success: false, error: error.message };
     }
   });
@@ -1510,6 +1546,31 @@ function registerIpcHandlers() {
     return loadAppSettingsBackup();
   });
 
+  // Backup/restauration générique du localStorage (toutes les clés modules)
+  const localStorageBackupPath = path.join(app.getPath('userData'), 'local-storage-backup.json');
+  ipcMain.handle('save-local-storage-backup', (_event, data) => {
+    try {
+      fs.writeFileSync(localStorageBackupPath, JSON.stringify(data, null, 2), 'utf8');
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur sauvegarde localStorage:', error.message);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('load-local-storage-backup', () => {
+    try {
+      if (fs.existsSync(localStorageBackupPath)) {
+        const data = fs.readFileSync(localStorageBackupPath, 'utf8');
+        return { success: true, data: JSON.parse(data) };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error('Erreur chargement localStorage backup:', error.message);
+      return { success: false, error: error.message };
+    }
+  });
+
 }
 
 // Protocole personnalisé pour charger les fichiers locaux (previews screenshots, etc.)
@@ -1521,16 +1582,26 @@ app.whenReady().then(() => {
 
   initOAuth2Client();
   registerUpdaterIpc();
+  registerVoiceIpc();
+  registerDockerIpc();
   registerIpcHandlers();
   createWindow();
   initUpdater(mainWindow);
+  initVoice(mainWindow);
+  initDocker(mainWindow);
   startMonitoringWorker();
   startOgWorker();
 });
 
 app.on('window-all-closed', () => {
+  isQuitting = true;
+  stopVoiceListening();
+  stopDocker();
   stopMonitoringWorker();
-  if (ogWorker) { ogWorker.terminate(); ogWorker = null; }
+  if (ogWorker) {
+    try { ogWorker.terminate(); } catch {}
+    ogWorker = null;
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }

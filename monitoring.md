@@ -55,20 +55,23 @@
 - Synchronisation (Google Calendar ?)
 
 ### 7. Home Assistant ✅
-- Contrôle des lumières
-- Prises connectées (switches)
-- Volets et stores (avec boutons ouvrir/stop/fermer)
-- Capteurs (température, humidité, etc.)
-- État des appareils
+- Interface style HA OS avec tuiles par domaine (lumières, switches, capteurs, volets, etc.)
+- Icônes colorées par domaine
+- Contrôle des lumières : color picker + slider luminosité pour lumières compatibles
+- Couleur RGB réelle affichée sur l'icône de la tuile
+- Volets et stores : boutons ouvrir/stop/fermer directement sur la tuile
+- Prises connectées (switches) avec toggle
+- Capteurs (température, humidité, etc.) avec état en temps réel
+- Mises à jour via WebSocket Home Assistant
 
 ### 8. Contrôle Volume ✅
-- Slider tactile global (via package `loudness`)
+- Interface DJ deck/mixer avec knob circulaire SVG (strokeDasharray animation)
+- VU-mètre LED avec niveaux colorés (vert → orange → rouge)
+- Contrôles transport : précédent, play/pause (icône dynamique), suivant
+- Sélecteur de périphérique audio de sortie (COM Interop Windows)
+- Préréglages de volume rapides (0%, 25%, 50%, 75%, 100%)
+- Visualiseur audio temps réel (64 barres, desktopCapturer + Web Audio API + Canvas @60fps)
 - Bouton mute/unmute
-- Sélecteur de périphérique audio (COM Interop Windows)
-- Contrôles média (prev/play-pause/next via virtual media keys)
-- Barres de volume visuelles (20 barres)
-- Préréglages volume (0%, 25%, 50%, 75%, 100%)
-- Visualiseur audio temps réel (Web Audio API + Canvas)
 
 ### 9. Outils (ex-Minuteur) ✅
 - **5 onglets** : Pomodoro, Minuteur, Chronomètre, Notes, Captures d'écran
@@ -94,7 +97,9 @@
 - Lecteur RSS multi-flux avec catégories (gaming, tech, deals)
 - Images extraites (enclosure, media:content, media:thumbnail)
 - Rafraîchissement automatique toutes les 5 min
+- Flux par défaut adaptés à la langue de l'application (changement auto)
 - Flux configurables dans localStorage
+- Ticker crypto en temps réel (Bitcoin, Ethereum, etc. via CoinGecko)
 
 ### 13. Presse-papiers ✅
 - Historique clipboard (texte + images)
@@ -106,25 +111,34 @@
 - Module persistant
 
 ### 15. Paramètres ✅
-- Thèmes prédéfinis + couleurs personnalisées
+- Thèmes prédéfinis (Sombre, Bleu Nuit, Forêt, Crépuscule, Clair) + couleurs personnalisées
+- Sauvegarde des paramètres en fichier (survit aux mises à jour NSIS)
 - Disposition sidebar + grille lanceur
 - Ordre des modules + visibilité
 - Webviews personnalisées (jusqu'à 5)
 - Sélecteur de langue (9 langues)
+- Sélecteur d'écran de destination
 - Démarrage automatique Windows (toggle)
-- Licence Gumroad
+- Licence Gumroad (activation/validation/désactivation)
 - Section mises à jour automatiques (electron-updater)
+- Guide utilisateur PDF (généré dynamiquement, 9 langues)
+- Footer liens légaux : politique de confidentialité, CGU, contact
 
 ### 16. Lanceur (StreamDeck) ✅
 - Grille personnalisable (7x5 par défaut)
-- 3 types : Application, Action système, Profil
+- 4 types : Application, Action système, Profil, Home Assistant
+- Type Home Assistant : contrôle d'entités HA (lumières avec couleur + luminosité, switches, etc.)
 - Icônes personnalisées (images base64)
 - Export/Import config JSON
+- Profils : groupes de boutons exécutés séquentiellement
 
 ### 17. Monitoring+ ✅
-- Résumé performances (MiniGauge SVG)
-- Alertes température (CPU, GPU, RAM)
-- Speedtest intégré (speedtest-net)
+- Affichage en courbes temps réel (CPU par cœur, GPU, réseau, disques)
+- Couleurs personnalisables par widget
+- Mode Gaming (détection automatique + activation manuelle)
+- Barres de progression pour RAM, stockage et débit réseau
+- Alertes température personnalisables avec notifications
+- Test de débit internet intégré (Speedtest)
 
 ### 18. Icône application ✅
 - Fichier `monitoring.ico` à la racine
@@ -161,8 +175,17 @@
 - Privacy Policy : `website/privacy-policy.html`
 - Terms of Use : `website/terms-of-use.html`
 - Google site verification intégrée
+- Screenshots des modules (13 images PNG déployées)
 
-### 24. Procédure de publication d'une mise à jour
+### 24. OBS Studio ✅
+- Contrôle OBS via `obs-websocket-js` (WebSocket, pas webview)
+- Changement de scènes, toggle sources (show/hide)
+- Démarrage/arrêt stream et enregistrement
+- Stats en temps réel : FPS, CPU, RAM, images perdues
+- Auto-connexion et auto-reconnexion
+- Chronomètre stream/enregistrement
+
+### 25. Procédure de publication d'une mise à jour
 1. Incrémenter la version dans `package.json` (ex: `"version": "1.0.0"` → `"version": "1.1.0"`)
 2. Créer un **Personal Access Token GitHub** (une seule fois) :
    - github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
@@ -237,6 +260,7 @@
 - Mise à jour le 04/02/2026 : Modules Volume, Home Assistant (volets) et Minuteur complétés
 - Mise à jour le 07/02/2026 : Module Outils (Pomodoro, Notes, Screenshots), Visualiseur audio, Icône app, i18n complet, Police +2px
 - Mise à jour le 08/02/2026 : Migration licence Gumroad, mises à jour automatiques (electron-updater), site web (GitHub Pages), privacy policy, terms of use
+- Mise à jour le 13/02/2026 : HA redesign (tuiles HA OS, color picker, RGB), Volume DJ deck, Lanceur type HA, News auto-langue, Settings backup fichier, Guide PDF v3 (9 langues), OBS module, Footer légal, Screenshots GitHub Pages, version 1.1.2
 
 ## Légende
 - ✅ Complété

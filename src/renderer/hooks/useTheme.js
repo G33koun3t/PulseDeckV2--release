@@ -185,6 +185,8 @@ export default function useTheme() {
           applyColors(restored.theme.colors);
           applyLayout(restored.layout);
           setSettings(restored);
+          // Notifier i18n et autres composants du changement
+          window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
         }
       });
     } else {
@@ -221,6 +223,9 @@ export default function useTheme() {
     applyColors(defaults.theme.colors);
     applyLayout(defaults.layout);
     setSettings(defaults);
+    if (window.electronAPI?.saveAppSettingsBackup) {
+      window.electronAPI.saveAppSettingsBackup(defaults);
+    }
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
   }, []);
 
