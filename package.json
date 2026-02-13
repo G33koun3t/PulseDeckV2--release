@@ -11,7 +11,7 @@
     "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development ELECTRON_RUN_AS_NODE= node scripts/launch-electron.js",
     "build": "vite build",
     "start": "node scripts/launch-electron.js",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && node -e \"try{require('fs').rmSync('node_modules/cpu-features',{recursive:true,force:true})}catch{}\" && electron-builder"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
