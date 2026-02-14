@@ -114,7 +114,7 @@
 - Thèmes prédéfinis (Sombre, Bleu Nuit, Forêt, Crépuscule, Clair) + couleurs personnalisées
 - Sauvegarde des paramètres en fichier (survit aux mises à jour NSIS)
 - Disposition sidebar + grille lanceur
-- Ordre des modules + visibilité
+- Ordre des modules + visibilité (inclut Voice Commands et Docker)
 - Webviews personnalisées (jusqu'à 5)
 - Sélecteur de langue (9 langues)
 - Sélecteur d'écran de destination
@@ -123,6 +123,7 @@
 - Section mises à jour automatiques (electron-updater)
 - Guide utilisateur PDF (généré dynamiquement, 9 langues)
 - Footer liens légaux : politique de confidentialité, CGU, contact
+- Gestion dynamique des nouveaux modules dans l'ordre sidebar (ajout auto avant Settings)
 
 ### 16. Lanceur (StreamDeck) ✅
 - Grille personnalisable (7x5 par défaut)
@@ -131,6 +132,7 @@
 - Icônes personnalisées (images base64)
 - Export/Import config JSON
 - Profils : groupes de boutons exécutés séquentiellement
+- Persistance fichier (`launcher-buttons.json`) — survit aux mises à jour et limites localStorage
 
 ### 17. Monitoring+ ✅
 - Affichage en courbes temps réel (CPU par cœur, GPU, réseau, disques)
@@ -185,8 +187,41 @@
 - Auto-connexion et auto-reconnexion
 - Chronomètre stream/enregistrement
 
-### 25. Procédure de publication d'une mise à jour
-1. Incrémenter la version dans `package.json` (ex: `"version": "1.0.0"` → `"version": "1.1.0"`)
+### 25. Commandes Vocales ✅
+- Reconnaissance vocale offline via **Vosk** (modèles téléchargés automatiquement par langue)
+- Fallback **Web Speech API** si Vosk indisponible
+- 9 langues supportées (FR, EN, DE, NL, ES, PT, IT, PL, JA)
+- Changement de langue à chaud (redémarrage automatique du recognizer)
+- Commandes Home Assistant : allumer/éteindre lumières, switches, scènes via alias configurables
+- Configuration : sélection micro, alias d'entités HA (affiché uniquement si HA configuré)
+- Historique des commandes avec horodatage
+- Module : `src/main/voice.js` (IPC) + `src/renderer/modules/VoiceCommands.jsx`
+- Protection crash : vérification `isDestroyed()` sur BrowserWindow avant envoi IPC
+
+### 26. Docker (SSH) ✅
+- Surveillance et contrôle de conteneurs Docker sur machines distantes via **SSH** (`ssh2`)
+- Multi-hôtes : NAS, serveurs dev, etc. avec configuration individuelle (nom, couleur, auth password/clé)
+- Liste conteneurs avec statuts colorés (running, exited, restarting, paused, dead, created)
+- Détails conteneur : image, ports, volumes, variables d'environnement, restart policy
+- Stats CPU/RAM en temps réel (polling 10s)
+- Actions : start, stop, restart + logs (50 dernières lignes)
+- Test de connexion SSH intégré
+- Config stockée en fichier (`docker-hosts.json` dans userData)
+- Module premium, icône sidebar personnalisée (baleine Docker SVG)
+- Module : `src/main/docker.js` + `src/renderer/modules/Docker.jsx`
+
+### 27. Persistance localStorage générique ✅
+- Backup automatique de toutes les clés localStorage modules sur disque (`local-storage-backup.json`)
+- Restauration automatique au démarrage si localStorage vide (survit aux mises à jour NSIS)
+- 3 niveaux de backup :
+  - `app-settings-backup.json` : thème, couleurs, langue, layout, sidebar, gaming mode
+  - `launcher-buttons.json` : boutons du lanceur (images base64)
+  - `local-storage-backup.json` : HA (url, token, domaines, entités cachées), OBS, News, Météo, Monitoring, Voice, Docker, Outils, Calendrier, Webviews custom
+- Sauvegarde périodique (30s) + au blur (perte de focus) + initiale (5s)
+- IPC : `save-local-storage-backup` / `load-local-storage-backup`
+
+### 28. Procédure de publication d'une mise à jour
+1. Incrémenter la version dans `package.json` (ex: `"version": "1.1.2"` → `"version": "1.1.3"`)
 2. Créer un **Personal Access Token GitHub** (une seule fois) :
    - github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Scope : `repo` (accès complet)
@@ -216,7 +251,10 @@
 - **WhatsApp Web** : Via webview intégré
 - **SoundCloud/YouTube** : Embeds ou APIs
 - **Home Assistant** : API REST + WebSocket (temps réel)
-- **Windows Audio API** : Contrôle volume (node-audio-windows ou similar)
+- **Windows Audio API** : Contrôle volume (loudness + ffi-napi)
+- **Vosk** : Reconnaissance vocale offline (modèles par langue, via koffi)
+- **ssh2** : Connexion SSH pour Docker distant (npmRebuild: false, prebuilds natifs)
+- **obs-websocket-js** : Contrôle OBS Studio via WebSocket
 
 ## Architecture UI
 
@@ -261,6 +299,7 @@
 - Mise à jour le 07/02/2026 : Module Outils (Pomodoro, Notes, Screenshots), Visualiseur audio, Icône app, i18n complet, Police +2px
 - Mise à jour le 08/02/2026 : Migration licence Gumroad, mises à jour automatiques (electron-updater), site web (GitHub Pages), privacy policy, terms of use
 - Mise à jour le 13/02/2026 : HA redesign (tuiles HA OS, color picker, RGB), Volume DJ deck, Lanceur type HA, News auto-langue, Settings backup fichier, Guide PDF v3 (9 langues), OBS module, Footer légal, Screenshots GitHub Pages, version 1.1.2
+- Mise à jour le 13/02/2026 : Module Commandes Vocales (Vosk + Web Speech, 9 langues), Module Docker (SSH multi-hôtes), Persistance localStorage générique (backup fichier toutes configs), Fix crash voice.js (isDestroyed), Fix processus exit (isQuitting + force-kill), Sidebar Docker icon (baleine SVG), Settings ordre modules dynamique, npmRebuild: false (prebuilds natifs), version 1.1.3
 
 ## Légende
 - ✅ Complété

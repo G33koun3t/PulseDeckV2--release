@@ -10,7 +10,10 @@ const path = require('path');
 const koffi = require('koffi');
 
 // Trouver le chemin vers les DLLs vosk
-const voskDir = path.dirname(require.resolve('vosk/package.json'));
+// En production (asar), require.resolve retourne un chemin dans app.asar
+// mais koffi.load() a besoin du fichier réel dans app.asar.unpacked
+let voskDir = path.dirname(require.resolve('vosk/package.json'));
+voskDir = voskDir.replace('app.asar', 'app.asar.unpacked');
 
 let soname;
 if (os.platform() === 'win32') {
