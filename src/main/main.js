@@ -1346,9 +1346,20 @@ function registerIpcHandlers() {
   // Speedtest
   ipcMain.handle('run-speedtest', async () => {
     try {
+      // En production (asar), le binaire est dans app.asar.unpacked
+      let speedtestBinary;
+      try {
+        const binDir = path.dirname(require.resolve('speedtest-net/package.json'));
+        const realBinDir = binDir.replace('app.asar', 'app.asar.unpacked');
+        const binPath = path.join(realBinDir, 'binaries', 'win-x64-1.0.0.exe');
+        if (fs.existsSync(binPath)) speedtestBinary = binPath;
+      } catch {}
+
       const cancel = speedTest.makeCancel();
       const timeout = setTimeout(() => cancel(), 60000);
-      const result = await speedTest({ acceptLicense: true, acceptGdpr: true, cancel });
+      const opts = { acceptLicense: true, acceptGdpr: true, cancel };
+      if (speedtestBinary) opts.binary = speedtestBinary;
+      const result = await speedTest(opts);
       clearTimeout(timeout);
       return {
         success: true,
