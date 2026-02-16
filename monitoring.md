@@ -300,6 +300,7 @@
 - Mise à jour le 08/02/2026 : Migration licence Gumroad, mises à jour automatiques (electron-updater), site web (GitHub Pages), privacy policy, terms of use
 - Mise à jour le 13/02/2026 : HA redesign (tuiles HA OS, color picker, RGB), Volume DJ deck, Lanceur type HA, News auto-langue, Settings backup fichier, Guide PDF v3 (9 langues), OBS module, Footer légal, Screenshots GitHub Pages, version 1.1.2
 - Mise à jour le 13/02/2026 : Module Commandes Vocales (Vosk + Web Speech, 9 langues), Module Docker (SSH multi-hôtes), Persistance localStorage générique (backup fichier toutes configs), Fix crash voice.js (isDestroyed), Fix processus exit (isQuitting + force-kill), Sidebar Docker icon (baleine SVG), Settings ordre modules dynamique, npmRebuild: false (prebuilds natifs), version 1.1.3
+- Mise à jour le 14/02/2026 : Fix asar production — vosk-koffi.js (app.asar → app.asar.unpacked pour libvosk.dll), speedtest-net (binary path explicite pour ENOTDIR), suppression cpu-features avant build (script dist), version 1.1.5
 
 ## Légende
 - ✅ Complété

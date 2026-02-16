@@ -216,6 +216,8 @@ export default {
     na: 'Brak danych',
     brightness: 'Jasność',
     color: 'Kolor',
+    otherRoom: 'Bez pokoju',
+    detail: { current: 'Obecna', last24h: 'Ostatnie 24 godziny', min: 'Min', max: 'Maks', average: 'Średnia', noHistory: 'Brak danych historycznych', loading: 'Ładowanie...' },
     states: {
       on: 'Włączony',
       off: 'Wyłączony',

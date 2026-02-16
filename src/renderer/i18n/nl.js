@@ -216,6 +216,8 @@ export default {
     na: 'N.v.t.',
     brightness: 'Helderheid',
     color: 'Kleur',
+    otherRoom: 'Geen kamer',
+    detail: { current: 'Huidig', last24h: 'Laatste 24 uur', min: 'Min', max: 'Max', average: 'Gemiddeld', noHistory: 'Geen geschiedenisgegevens', loading: 'Laden...' },
     states: {
       on: 'Aan',
       off: 'Uit',

@@ -216,6 +216,8 @@ export default {
     na: 'N/D',
     brightness: 'Brillo',
     color: 'Color',
+    otherRoom: 'Sin habitación',
+    detail: { current: 'Actual', last24h: 'Últimas 24 horas', min: 'Mín', max: 'Máx', average: 'Promedio', noHistory: 'Sin datos históricos', loading: 'Cargando...' },
     states: {
       on: 'Encendido',
       off: 'Apagado',

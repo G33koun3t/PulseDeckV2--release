@@ -216,6 +216,8 @@ export default {
     na: 'N/A',
     brightness: '明るさ',
     color: '色',
+    otherRoom: '部屋なし',
+    detail: { current: '現在', last24h: '過去24時間', min: '最小', max: '最大', average: '平均', noHistory: '履歴データなし', loading: '読み込み中...' },
     states: {
       on: 'オン',
       off: 'オフ',

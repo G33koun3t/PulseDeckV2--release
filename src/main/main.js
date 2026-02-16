@@ -729,22 +729,28 @@ function registerIpcHandlers() {
   });
 
   // Home Assistant - Récupérer des données (states, services, etc.)
-  ipcMain.handle('fetch-home-assistant', async (event, haUrl, token, endpoint) => {
+  ipcMain.handle('fetch-home-assistant', async (event, haUrl, token, endpoint, opts = {}) => {
     return new Promise((resolve) => {
       const url = new URL(`/api/${endpoint}`, haUrl);
       const isHttps = url.protocol === 'https:';
       const httpModule = isHttps ? require('https') : require('http');
+      const method = opts.method || 'GET';
+      const body = opts.body ? JSON.stringify(opts.body) : null;
 
       const options = {
         hostname: url.hostname,
         port: url.port || (isHttps ? 443 : 8123),
-        path: url.pathname,
-        method: 'GET',
+        path: url.pathname + url.search,
+        method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       };
+
+      if (body) {
+        options.headers['Content-Length'] = Buffer.byteLength(body);
+      }
 
       const req = httpModule.request(options, (response) => {
         let data = '';
@@ -757,7 +763,7 @@ function registerIpcHandlers() {
           try {
             if (response.statusCode === 200) {
               const parsed = JSON.parse(data);
-              console.log(`Home Assistant ${endpoint}: ${Array.isArray(parsed) ? parsed.length + ' éléments' : 'OK'}`);
+              if (endpoint === 'states') console.log(`Home Assistant ${endpoint}: ${Array.isArray(parsed) ? parsed.length + ' éléments' : 'OK'}`);
               resolve({ success: true, data: parsed });
             } else {
               console.error(`Home Assistant erreur ${response.statusCode}:`, data);
@@ -775,6 +781,7 @@ function registerIpcHandlers() {
         resolve({ success: false, error: error.message });
       });
 
+      if (body) req.write(body);
       req.end();
     });
   });

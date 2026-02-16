@@ -20,7 +20,7 @@ import { useLicense } from './contexts/LicenseContext';
 // Clés localStorage importantes à sauvegarder sur disque
 // (app_settings et streamdeck_buttons ont leur propre backup dédié)
 const BACKUP_KEYS = [
-  'ha_url', 'ha_token', 'ha_visible_domains', 'ha_hidden_entities',
+  'ha_url', 'ha_token', 'ha_visible_domains', 'ha_hidden_entities', 'ha_area_cache', 'ha_collapsed_rooms',
   'obs_ws_url', 'obs_ws_password',
   'news_feeds', 'news_feeds_lang', 'news_feeds_custom', 'news_show_crypto',
   'weather_city',

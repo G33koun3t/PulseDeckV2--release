@@ -216,6 +216,7 @@ export default {
     na: 'N/A',
     brightness: 'Luminosité',
     color: 'Couleur',
+    otherRoom: 'Sans pièce',
     states: {
       on: 'Allumé',
       off: 'Éteint',

@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   googleCreateEvent: (eventData) => ipcRenderer.invoke('google-create-event', eventData),
 
   // Home Assistant
-  fetchHomeAssistant: (haUrl, token, endpoint) => ipcRenderer.invoke('fetch-home-assistant', haUrl, token, endpoint),
+  fetchHomeAssistant: (haUrl, token, endpoint, opts) => ipcRenderer.invoke('fetch-home-assistant', haUrl, token, endpoint, opts),
   callHomeAssistantService: (haUrl, token, domain, service, data) => ipcRenderer.invoke('call-home-assistant-service', haUrl, token, domain, service, data),
 
   // Volume Control

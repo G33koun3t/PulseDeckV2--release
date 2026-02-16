@@ -216,6 +216,8 @@ export default {
     na: 'N/A',
     brightness: 'Brightness',
     color: 'Color',
+    otherRoom: 'No room',
+    detail: { current: 'Current', last24h: 'Last 24 hours', min: 'Min', max: 'Max', average: 'Average', noHistory: 'No history data', loading: 'Loading...' },
     states: {
       on: 'On',
       off: 'Off',
