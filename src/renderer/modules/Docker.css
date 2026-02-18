@@ -393,6 +393,11 @@
   color: #eab308;
   background: rgba(234, 179, 8, 0.08);
 }
+.docker-quick-update:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
 .docker-quick-logs:hover {
   border-color: var(--accent-primary);
   color: var(--accent-primary);

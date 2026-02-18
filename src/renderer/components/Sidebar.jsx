@@ -41,7 +41,7 @@ import { useLicense } from '../contexts/LicenseContext';
 const menuItems = [
   { id: 'monitoring', icon: Monitor, labelKey: 'sidebar.monitoring' },
   { id: 'weather', icon: Sun, labelKey: 'sidebar.weather' },
-  // { id: 'calendar', icon: Calendar, labelKey: 'sidebar.calendar' }, // Désactivé en attendant validation Google
+  { id: 'calendar', icon: Calendar, labelKey: 'sidebar.calendar' },
   { id: 'homeassistant', icon: Home, labelKey: 'sidebar.homeassistant' },
   { id: 'volume', icon: Volume2, labelKey: 'sidebar.volume' },
   { id: 'timer', icon: Wrench, labelKey: 'sidebar.timer' },

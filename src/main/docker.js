@@ -189,6 +189,9 @@ async function inspectContainer(conn, containerId) {
     startedAt: c.State?.StartedAt,
     finishedAt: c.State?.FinishedAt,
     created: c.Created,
+    composeProject: c.Config?.Labels?.['com.docker.compose.project'] || null,
+    composeService: c.Config?.Labels?.['com.docker.compose.service'] || null,
+    composeWorkingDir: c.Config?.Labels?.['com.docker.compose.project.working_dir'] || null,
   };
 }
 
@@ -206,6 +209,35 @@ async function containerAction(conn, containerId, action) {
   if (!validActions.includes(action)) throw new Error('Invalid action');
   if (!isValidContainerId(containerId)) throw new Error('Invalid container ID');
   await execSSH(conn, `docker ${action} ${containerId}`, 30000);
+}
+
+async function updateContainer(conn, containerId) {
+  if (!isValidContainerId(containerId)) throw new Error('Invalid container ID');
+
+  // Récupérer les infos du conteneur (image + labels compose)
+  const { stdout } = await execSSH(conn, `docker inspect ${containerId}`);
+  const data = JSON.parse(stdout);
+  if (!data || !data[0]) throw new Error('Container not found');
+  const c = data[0];
+
+  const image = c.Config?.Image || '';
+  const composeService = c.Config?.Labels?.['com.docker.compose.service'] || null;
+  const composeWorkingDir = c.Config?.Labels?.['com.docker.compose.project.working_dir'] || null;
+
+  if (!image) throw new Error('No image found for container');
+
+  if (composeService && composeWorkingDir) {
+    // Docker Compose : pull + recreate
+    await execSSH(conn,
+      `cd ${composeWorkingDir} && docker compose pull ${composeService} && docker compose up -d ${composeService}`,
+      120000
+    );
+    return { compose: true, pulled: true };
+  } else {
+    // Standalone : pull uniquement
+    await execSSH(conn, `docker pull ${image}`, 120000);
+    return { compose: false, pulled: true };
+  }
 }
 
 // ========== IPC Handlers ==========
@@ -355,6 +387,17 @@ function registerDockerIpc() {
     try {
       await containerAction(conn, containerId, action);
       return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('docker-update-container', async (_event, hostId, containerId) => {
+    const conn = connections.get(hostId);
+    if (!conn) return { success: false, error: 'Not connected' };
+    try {
+      const result = await updateContainer(conn, containerId);
+      return { success: true, data: result };
     } catch (err) {
       return { success: false, error: err.message };
     }

@@ -10,7 +10,6 @@ const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const loudness = require('loudness');
 const RSSParser = require('rss-parser');
-const { google } = require('googleapis');
 const licenseModule = require('./license');
 const guide = require('./guide');
 const { initUpdater, registerUpdaterIpc } = require('./updater');
@@ -145,42 +144,7 @@ async function getGpuMetrics() {
   }
 }
 
-// Google OAuth2 setup
-const _GC = 'eyJpbnN0YWxsZWQiOnsiY2xpZW50X2lkIjoiODA3MDM4ODQ3NTkwLXFkbXV0cGNpbWQxZXVrZDJlZmE3cW8wN3NwMTdzdmhtLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwicHJvamVjdF9pZCI6Im1vbml0b3JpbmctNDg2NTA4IiwiYXV0aF91cmkiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsInRva2VuX3VyaSI6Imh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwiY2xpZW50X3NlY3JldCI6IkdPQ1NQWC04N01YWTJvWU9NSk9YT0hlRUVGbHNGT3RfVDhNIiwicmVkaXJlY3RfdXJpcyI6WyJodHRwOi8vbG9jYWxob3N0Il19fQ==';
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
-
-let oAuth2Client = null;
-
-function getTokenPath() {
-  const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'google-tokens.json');
-}
-
-function initOAuth2Client() {
-  try {
-    const credentials = JSON.parse(Buffer.from(_GC, 'base64').toString('utf8'));
-    const { client_id, client_secret } = credentials.installed;
-    oAuth2Client = new google.auth.OAuth2(client_id, client_secret, 'http://localhost:3847/callback');
-
-    // Charger les tokens existants
-    const tokenPath = getTokenPath();
-    if (fs.existsSync(tokenPath)) {
-      const tokens = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-      oAuth2Client.setCredentials(tokens);
-      console.log('Google OAuth2: Tokens chargés');
-    }
-  } catch (error) {
-    console.error('Erreur init OAuth2:', error.message);
-  }
-}
-
-function saveTokens(tokens) {
-  const tokenPath = getTokenPath();
-  fs.writeFileSync(tokenPath, JSON.stringify(tokens));
-  console.log('Google OAuth2: Tokens sauvegardés');
-}
-
-// Parser ICS simple pour Google Calendar
+// Parser ICS
 function parseICS(icsData) {
   const events = [];
   const lines = icsData.split(/\r?\n/);
@@ -553,7 +517,7 @@ function createWindow() {
           " style-src 'self' 'unsafe-inline';" +
           " img-src 'self' data: https: file:;" +
           " media-src 'self' mediastream: blob:;" +
-          " connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com ws://localhost:* ws://127.0.0.1:* https://*.google.com https://*.googleapis.com wss://*.google.com;"
+          " connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com ws://localhost:* ws://127.0.0.1:*;"
         ],
       },
     });
@@ -1179,147 +1143,6 @@ function registerIpcHandlers() {
     }
   });
 
-  // Google Calendar API - Vérifier le statut de connexion
-  ipcMain.handle('google-auth-status', async () => {
-    if (!oAuth2Client) {
-      return { connected: false, error: 'OAuth2 non initialisé' };
-    }
-
-    const tokens = oAuth2Client.credentials;
-    if (!tokens || !tokens.access_token) {
-      return { connected: false };
-    }
-
-    // Vérifier si le token est encore valide
-    try {
-      const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
-      await calendar.calendarList.list({ maxResults: 1 });
-      return { connected: true };
-    } catch (error) {
-      // Token expiré, essayer de rafraîchir
-      if (tokens.refresh_token) {
-        try {
-          const { credentials } = await oAuth2Client.refreshAccessToken();
-          oAuth2Client.setCredentials(credentials);
-          saveTokens(credentials);
-          return { connected: true };
-        } catch (refreshError) {
-          return { connected: false, error: 'Token expiré' };
-        }
-      }
-      return { connected: false, error: error.message };
-    }
-  });
-
-  // Google Calendar API - Lancer l'authentification OAuth2
-  ipcMain.handle('google-auth-start', async () => {
-    if (!oAuth2Client) {
-      return { success: false, error: 'OAuth2 non initialisé. Vérifiez credentials.json' };
-    }
-
-    const authUrl = oAuth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: SCOPES,
-      prompt: 'consent',
-    });
-
-    return new Promise((resolve) => {
-      // Créer un serveur HTTP local pour capturer le callback
-      const http = require('http');
-      const server = http.createServer(async (req, res) => {
-        if (req.url.startsWith('/callback')) {
-          const url = new URL(req.url, 'http://localhost:3847');
-          const code = url.searchParams.get('code');
-
-          if (code) {
-            try {
-              const { tokens } = await oAuth2Client.getToken(code);
-              oAuth2Client.setCredentials(tokens);
-              saveTokens(tokens);
-
-              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-              res.end('<html><body style="background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><h1>Connexion Google reussie ! Vous pouvez fermer cette fenetre.</h1></body></html>');
-
-              server.close();
-              resolve({ success: true });
-            } catch (error) {
-              res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
-              res.end(`<html><body style="background:#1a1a2e;color:#ff6b6b;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><h1>Erreur: ${error.message}</h1></body></html>`);
-
-              server.close();
-              resolve({ success: false, error: error.message });
-            }
-          }
-        }
-      });
-
-      server.listen(3847, () => {
-        console.log('OAuth2 callback server on port 3847');
-        // Ouvrir le navigateur pour l'authentification
-        shell.openExternal(authUrl);
-      });
-
-      // Timeout après 2 minutes
-      setTimeout(() => {
-        server.close();
-        resolve({ success: false, error: 'Timeout - authentification annulée' });
-      }, 120000);
-    });
-  });
-
-  // Google Calendar API - Déconnexion
-  ipcMain.handle('google-auth-logout', async () => {
-    const tokenPath = getTokenPath();
-    if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
-    }
-    if (oAuth2Client) {
-      oAuth2Client.setCredentials({});
-    }
-    return { success: true };
-  });
-
-  // Google Calendar API - Créer un événement
-  ipcMain.handle('google-create-event', async (event, eventData) => {
-    if (!oAuth2Client || !oAuth2Client.credentials.access_token) {
-      return { success: false, error: 'Non connecté à Google' };
-    }
-
-    try {
-      const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
-
-      const calendarEvent = {
-        summary: eventData.title,
-        start: {
-          dateTime: eventData.startDateTime,
-          timeZone: 'Europe/Paris',
-        },
-        end: {
-          dateTime: eventData.endDateTime,
-          timeZone: 'Europe/Paris',
-        },
-      };
-
-      if (eventData.description) {
-        calendarEvent.description = eventData.description;
-      }
-      if (eventData.location) {
-        calendarEvent.location = eventData.location;
-      }
-
-      const result = await calendar.events.insert({
-        calendarId: 'primary',
-        resource: calendarEvent,
-      });
-
-      console.log('Google Calendar: Événement créé -', result.data.summary);
-      return { success: true, event: result.data };
-    } catch (error) {
-      console.error('Erreur création événement:', error.message);
-      return { success: false, error: error.message };
-    }
-  });
-
   // ========== Licence ==========
   ipcMain.handle('check-license', async () => {
     return await licenseModule.checkLicense();
@@ -1598,7 +1421,6 @@ protocol.registerSchemesAsPrivileged([
 
 app.whenReady().then(() => {
 
-  initOAuth2Client();
   registerUpdaterIpc();
   registerVoiceIpc();
   registerDockerIpc();

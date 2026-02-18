@@ -21,14 +21,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Ouvrir un chemin dans l'explorateur
   openPath: (path) => ipcRenderer.invoke('open-path', path),
 
-  // Google Calendar (ICS)
+  // Calendrier ICS
   fetchGoogleCalendar: (icsUrl) => ipcRenderer.invoke('fetch-google-calendar', icsUrl),
-
-  // Google Calendar API (OAuth2)
-  googleAuthStatus: () => ipcRenderer.invoke('google-auth-status'),
-  googleAuthStart: () => ipcRenderer.invoke('google-auth-start'),
-  googleAuthLogout: () => ipcRenderer.invoke('google-auth-logout'),
-  googleCreateEvent: (eventData) => ipcRenderer.invoke('google-create-event', eventData),
 
   // Home Assistant
   fetchHomeAssistant: (haUrl, token, endpoint, opts) => ipcRenderer.invoke('fetch-home-assistant', haUrl, token, endpoint, opts),
@@ -138,6 +132,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dockerInspect: (hostId, containerId) => ipcRenderer.invoke('docker-inspect', hostId, containerId),
   dockerLogs: (hostId, containerId, tail) => ipcRenderer.invoke('docker-logs', hostId, containerId, tail),
   dockerAction: (hostId, containerId, action) => ipcRenderer.invoke('docker-action', hostId, containerId, action),
+  dockerUpdateContainer: (hostId, containerId) => ipcRenderer.invoke('docker-update-container', hostId, containerId),
   dockerSelectSshKey: () => ipcRenderer.invoke('docker-select-ssh-key'),
 
   // Mises à jour automatiques

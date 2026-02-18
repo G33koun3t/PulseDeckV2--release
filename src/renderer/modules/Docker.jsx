@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Container, Server, Plus, Settings, X, RefreshCw, Play, Square, RotateCcw,
   FileText, ChevronRight, ChevronDown, Wifi, WifiOff, Trash2, Key,
-  AlertCircle, Check, Loader, Eye, EyeOff, Copy, Activity,
+  AlertCircle, Check, Loader, Eye, EyeOff, Copy, Activity, Download,
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import './Docker.css';
@@ -117,7 +117,7 @@ function HostGroup({ host, containers, stats, isConnected, isConnecting, isExpan
   );
 }
 
-function ContainerDetail({ details, stats, logs, showLogs, logsAutoRefresh, onFetchLogs, onToggleAutoRefresh, onAction, actionLoading, t }) {
+function ContainerDetail({ details, stats, logs, showLogs, logsAutoRefresh, onFetchLogs, onToggleAutoRefresh, onAction, onUpdate, actionLoading, t }) {
   return (
     <div className="docker-detail-content">
       {/* Header avec nom + actions rapides */}
@@ -158,6 +158,14 @@ function ContainerDetail({ details, stats, logs, showLogs, logsAutoRefresh, onFe
             title={t('docker.restart')}
           >
             <RotateCcw size={18} />
+          </button>
+          <button
+            className="docker-quick-btn docker-quick-update"
+            onClick={onUpdate}
+            disabled={actionLoading}
+            title={t('docker.update')}
+          >
+            <Download size={18} />
           </button>
           <button
             className="docker-quick-btn docker-quick-logs"
@@ -689,6 +697,22 @@ function DockerModule() {
     setActionLoading(null);
   }, [selectedContainer, fetchContainers, fetchStats, selectContainer]);
 
+  const handleUpdate = useCallback(async () => {
+    if (!selectedContainer) return;
+    const { hostId, containerId } = selectedContainer;
+    setActionLoading('update');
+    try {
+      await window.electronAPI.dockerUpdateContainer(hostId, containerId);
+      // Refresh after update (délai plus long car pull peut prendre du temps)
+      setTimeout(() => {
+        fetchContainers(hostId);
+        fetchStats(hostId);
+        selectContainer(hostId, containerId);
+      }, 2000);
+    } catch {}
+    setActionLoading(null);
+  }, [selectedContainer, fetchContainers, fetchStats, selectContainer]);
+
   const fetchLogs = useCallback(async () => {
     if (!selectedContainer) return;
     const { hostId, containerId } = selectedContainer;
@@ -829,6 +853,7 @@ function DockerModule() {
               onFetchLogs={fetchLogs}
               onToggleAutoRefresh={() => setLogsAutoRefresh(prev => !prev)}
               onAction={handleAction}
+              onUpdate={handleUpdate}
               actionLoading={actionLoading}
               t={t}
             />

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
   Clock, Plus, X, Trash2, Settings, RefreshCw,
-  LogIn, LogOut, Loader, CheckCircle
 } from 'lucide-react';
 import './Calendar.css';
 import { useTranslation } from '../i18n';
@@ -110,13 +109,9 @@ function CalendarModule() {
 
   // Événements par calendrier { calId: { dateKey: [events] } }
   const [calendarEvents, setCalendarEvents] = useState({});
-  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
-  const [googleError, setGoogleError] = useState(null);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+  const [calendarError, setCalendarError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
-
-  // Google Auth
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   // UI
   const [showEventModal, setShowEventModal] = useState(false);
@@ -124,7 +119,6 @@ function CalendarModule() {
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventTime, setNewEventTime] = useState('12:00');
   const [newEventEndTime, setNewEventEndTime] = useState('13:00');
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   // Settings state
   const [tempCalendars, setTempCalendars] = useState(calendars);
@@ -142,45 +136,6 @@ function CalendarModule() {
     localStorage.setItem('calendar_list', JSON.stringify(calendars));
   }, [calendars]);
 
-  // Vérifier le statut Google Auth au démarrage
-  useEffect(() => {
-    checkGoogleAuth();
-  }, []);
-
-  const checkGoogleAuth = async () => {
-    if (!window.electronAPI?.googleAuthStatus) return;
-    try {
-      const result = await window.electronAPI.googleAuthStatus();
-      setGoogleConnected(result.connected);
-    } catch (e) {
-      console.error('Erreur vérification auth Google:', e);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    if (!window.electronAPI?.googleAuthStart) return;
-    setIsAuthLoading(true);
-    try {
-      const result = await window.electronAPI.googleAuthStart();
-      if (result.success) {
-        setGoogleConnected(true);
-        fetchAllCalendars();
-      } else {
-        setGoogleError(result.error || t('calendar.connectionFailed'));
-      }
-    } catch (e) {
-      setGoogleError(e.message);
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleGoogleLogout = async () => {
-    if (!window.electronAPI?.googleAuthLogout) return;
-    await window.electronAPI.googleAuthLogout();
-    setGoogleConnected(false);
-  };
-
   // Récupérer tous les calendriers
   const fetchAllCalendars = useCallback(async () => {
     if (!window.electronAPI?.fetchGoogleCalendar) return;
@@ -188,8 +143,8 @@ function CalendarModule() {
     const enabledCalendars = calendars.filter(c => c.enabled && c.url);
     if (enabledCalendars.length === 0) return;
 
-    setIsLoadingGoogle(true);
-    setGoogleError(null);
+    setIsLoadingCalendars(true);
+    setCalendarError(null);
 
     const allEvents = {};
 
@@ -248,13 +203,13 @@ function CalendarModule() {
       setLastSync(new Date());
 
       if (hasError) {
-        setGoogleError(t('calendar.syncError'));
+        setCalendarError(t('calendar.syncError'));
       }
     } catch (error) {
       console.error('Erreur synchronisation:', error);
-      setGoogleError(error.message);
+      setCalendarError(error.message);
     } finally {
-      setIsLoadingGoogle(false);
+      setIsLoadingCalendars(false);
     }
   }, [calendars]);
 
@@ -284,44 +239,9 @@ function CalendarModule() {
     setSelectedDate(dayInfo.date);
   };
 
-  const addEvent = async () => {
+  const addEvent = () => {
     if (!newEventTitle.trim()) return;
-
-    // Si connecté à Google, créer via API
-    if (googleConnected && window.electronAPI?.googleCreateEvent) {
-      setIsCreatingEvent(true);
-
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-
-      const startDateTime = `${year}-${month}-${day}T${newEventTime}:00`;
-      const endDateTime = `${year}-${month}-${day}T${newEventEndTime}:00`;
-
-      try {
-        const result = await window.electronAPI.googleCreateEvent({
-          title: newEventTitle,
-          startDateTime,
-          endDateTime,
-        });
-
-        if (result.success) {
-          console.log('Événement créé sur Google Calendar');
-          setTimeout(fetchAllCalendars, 3000);
-        } else {
-          console.error('Erreur création:', result.error);
-          addLocalEvent();
-        }
-      } catch (e) {
-        console.error('Erreur:', e);
-        addLocalEvent();
-      } finally {
-        setIsCreatingEvent(false);
-      }
-    } else {
-      addLocalEvent();
-    }
-
+    addLocalEvent();
     setNewEventTitle('');
     setNewEventTime('12:00');
     setNewEventEndTime('13:00');
@@ -354,7 +274,7 @@ function CalendarModule() {
   // Combiner événements locaux et tous les calendriers
   const getEventsForDate = (date) => {
     const key = dateToKey(date);
-    const local = googleConnected ? [] : (localEvents[key] || []).map(e => ({ ...e, calendarColor: 'var(--accent-secondary)' }));
+    const local = (localEvents[key] || []).map(e => ({ ...e, calendarColor: 'var(--accent-secondary)' }));
 
     const calEvts = [];
     Object.values(calendarEvents).forEach(calData => {
@@ -419,36 +339,6 @@ function CalendarModule() {
             </button>
           </div>
           <div className="settings-form">
-            {/* Google Auth Section */}
-            <div className="form-group google-auth-section">
-              <label>{t('calendar.googleAccount')}</label>
-              {googleConnected ? (
-                <div className="google-auth-status connected">
-                  <CheckCircle size={18} />
-                  <span>{t('calendar.connectedToGoogle')}</span>
-                  <button className="logout-btn" onClick={handleGoogleLogout}>
-                    <LogOut size={14} /> {t('calendar.disconnect')}
-                  </button>
-                </div>
-              ) : (
-                <div className="google-auth-status disconnected">
-                  <button
-                    className="google-login-btn"
-                    onClick={handleGoogleLogin}
-                    disabled={isAuthLoading}
-                  >
-                    {isAuthLoading ? (
-                      <><Loader size={16} className="spinning" /> {t('calendar.connecting')}</>
-                    ) : (
-                      <><LogIn size={16} /> {t('calendar.connectGoogle')}</>
-                    )}
-                  </button>
-                  <small>{t('calendar.googleNote')}</small>
-                </div>
-              )}
-              <p className="google-auth-desc">{t('calendar.googleDesc')}</p>
-            </div>
-
             {/* Liste des calendriers */}
             <div className="form-group">
               <label>{t('calendar.icsCalendars')} ({tempCalendars.length})</label>
@@ -531,9 +421,9 @@ function CalendarModule() {
                 <span>{t('calendar.lastSync')}: {lastSync.toLocaleTimeString(dateLocale)}</span>
               </div>
             )}
-            {googleError && (
+            {calendarError && (
               <div className="error-message">
-                {googleError}
+                {calendarError}
               </div>
             )}
             <button className="save-btn" onClick={saveSettings}>
@@ -562,17 +452,12 @@ function CalendarModule() {
             </button>
           </div>
           <div className="calendar-actions">
-            {googleConnected && (
-              <span className="google-badge" title={t('calendar.connectedToGoogle')}>
-                <CheckCircle size={14} />
-              </span>
-            )}
             <button
-              className={`sync-btn ${isLoadingGoogle ? 'loading' : ''}`}
+              className={`sync-btn ${isLoadingCalendars ? 'loading' : ''}`}
               onClick={fetchAllCalendars}
               title={t('calendar.syncCalendars')}
             >
-              <RefreshCw size={16} className={isLoadingGoogle ? 'spinning' : ''} />
+              <RefreshCw size={16} className={isLoadingCalendars ? 'spinning' : ''} />
             </button>
             <button className="settings-btn" onClick={() => {
               setTempCalendars(calendars);
@@ -691,11 +576,9 @@ function CalendarModule() {
               <span className="legend-dot" style={{ background: cal.color }} /> {cal.name}
             </span>
           ))}
-          {!googleConnected && (
-            <span className="legend-item">
-              <span className="legend-dot" style={{ background: 'var(--accent-secondary)' }} /> {t('calendar.local')}
-            </span>
-          )}
+          <span className="legend-item">
+            <span className="legend-dot" style={{ background: 'var(--accent-secondary)' }} /> {t('calendar.local')}
+          </span>
         </div>
       </div>
 
@@ -705,11 +588,6 @@ function CalendarModule() {
           <div className="event-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{t('calendar.newEvent')}</h3>
-              {googleConnected && (
-                <span className="modal-google-badge">
-                  <CheckCircle size={14} /> Google
-                </span>
-              )}
               <button className="close-modal" onClick={() => setShowEventModal(false)}>
                 <X size={18} />
               </button>
@@ -766,17 +644,11 @@ function CalendarModule() {
                 {t('common.cancel')}
               </button>
               <button
-                className={`save-btn ${googleConnected ? 'google' : ''}`}
+                className="save-btn"
                 onClick={addEvent}
-                disabled={isCreatingEvent || !newEventTitle.trim()}
+                disabled={!newEventTitle.trim()}
               >
-                {isCreatingEvent ? (
-                  <><Loader size={16} className="spinning" /> {t('calendar.creating')}</>
-                ) : googleConnected ? (
-                  <>{t('calendar.addToGoogle')}</>
-                ) : (
-                  <>{t('calendar.addLocal')}</>
-                )}
+                {t('calendar.addLocal')}
               </button>
             </div>
           </div>
