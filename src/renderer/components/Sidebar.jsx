@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Video,
   Mic,
+  Image,
   Settings,
   Minus,
   X,
@@ -50,6 +51,7 @@ const menuItems = [
   { id: 'obs', icon: Video, labelKey: 'sidebar.obs' },
   { id: 'voicecommands', icon: Mic, labelKey: 'sidebar.voicecommands' },
   { id: 'docker', icon: DockerIcon, labelKey: 'sidebar.docker' },
+  { id: 'photoframe', icon: Image, labelKey: 'sidebar.photoframe' },
 ];
 
 // Settings toujours en dernière position

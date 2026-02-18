@@ -1,0 +1,468 @@
+.photoframe-module {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ===== Two-layer crossfade system ===== */
+.photoframe-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity var(--pf-transition, 1s) ease;
+}
+
+.photoframe-layer.active {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* Transition: slide */
+.photoframe-module[data-transition="slide"] .photoframe-layer {
+  transition: opacity var(--pf-transition, 1s) ease,
+              transform var(--pf-transition, 1s) ease;
+  transform: translateX(100%);
+}
+
+.photoframe-module[data-transition="slide"] .photoframe-layer.active {
+  transform: translateX(0);
+}
+
+/* Transition: zoom */
+.photoframe-module[data-transition="zoom"] .photoframe-layer {
+  transition: opacity var(--pf-transition, 1s) ease,
+              transform var(--pf-transition, 1s) ease;
+  transform: scale(1.15);
+}
+
+.photoframe-module[data-transition="zoom"] .photoframe-layer.active {
+  transform: scale(1);
+}
+
+/* Transition: none */
+.photoframe-module[data-transition="none"] .photoframe-layer {
+  transition: none;
+}
+
+/* ===== Overlay controls ===== */
+.photoframe-controls {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.photoframe-controls.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.photoframe-controls button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.photoframe-controls button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Image counter */
+.photoframe-info {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.photoframe-info.visible {
+  opacity: 1;
+}
+
+/* Settings gear button */
+.photoframe-settings-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.photoframe-settings-btn.visible {
+  opacity: 1;
+}
+
+.photoframe-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* ===== Empty state ===== */
+.photoframe-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.photoframe-empty svg {
+  opacity: 0.3;
+}
+
+.photoframe-empty p {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.photoframe-empty small {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.photoframe-empty button {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: var(--accent-gradient, linear-gradient(135deg, #6366f1, #8b5cf6));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.photoframe-empty button:hover {
+  opacity: 0.9;
+}
+
+/* ===== Settings panel ===== */
+.photoframe-settings {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+  overflow-y: auto;
+}
+
+.photoframe-settings-inner {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.photoframe-settings .settings-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.photoframe-settings .settings-header svg {
+  color: var(--accent-primary);
+}
+
+.photoframe-settings .settings-header span {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.photoframe-settings .close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.photoframe-settings .close-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.photoframe-settings .settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.photoframe-settings .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photoframe-settings .form-group label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Folder list */
+.photoframe-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photoframe-folder-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+}
+
+.photoframe-folder-item svg {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.photoframe-folder-path {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.photoframe-folder-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.photoframe-folder-remove:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.photoframe-add-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.photoframe-add-folder:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* Sliders */
+.photoframe-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.photoframe-slider-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  outline: none;
+}
+
+.photoframe-slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+}
+
+.photoframe-slider-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Transition type selector */
+.photoframe-transition-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.photoframe-transition-option {
+  padding: 6px 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.photoframe-transition-option:hover {
+  background: var(--bg-primary);
+}
+
+.photoframe-transition-option.active {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* Shuffle toggle */
+.photoframe-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.photoframe-toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  padding: 0;
+}
+
+.photoframe-toggle.active {
+  background: var(--accent-primary);
+}
+
+.photoframe-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+}
+
+.photoframe-toggle.active::after {
+  transform: translateX(20px);
+}
+
+/* Image count */
+.photoframe-image-count {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* Save button */
+.photoframe-settings .save-btn {
+  padding: 12px;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.photoframe-settings .save-btn:hover {
+  opacity: 0.9;
+}
+
+/* Scrollbar */
+.photoframe-settings::-webkit-scrollbar {
+  width: 4px;
+}
+
+.photoframe-settings::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}

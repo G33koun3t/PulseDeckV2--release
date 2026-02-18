@@ -760,14 +760,76 @@
   transform: none;
 }
 
-/* Local Account Section */
-.local-account-section {
+/* Local Account Items */
+.cal-color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-name-input {
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--bg-primary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cal-name-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.add-local-form {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+}
+
+/* Account Selector (event modal) */
+.account-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
   background: var(--bg-tertiary);
+  border: 2px solid transparent;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-chip:hover {
+  background: var(--bg-primary);
+}
+
+.account-chip.active {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.account-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* Add Calendar Section */

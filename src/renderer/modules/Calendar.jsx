@@ -13,12 +13,6 @@ const CALENDAR_COLORS = [
   '#f06292', '#a1887f', '#8e24aa', '#039be5',
 ];
 
-// Compte local par défaut
-const DEFAULT_LOCAL_ACCOUNT = {
-  name: 'Personnel',
-  color: '#4285f4',
-};
-
 // Obtenir les jours du mois
 const getDaysInMonth = (year, month) => {
   const firstDay = new Date(year, month, 1);
@@ -81,28 +75,37 @@ function CalendarModule() {
   const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
 
-  // Événements locaux
+  // Événements locaux (chaque événement a un accountId)
   const [localEvents, setLocalEvents] = useState(() => {
     const saved = localStorage.getItem('calendar_events');
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Compte local (nom + couleur)
-  const [localAccount, setLocalAccount] = useState(() => {
-    const saved = localStorage.getItem('calendar_local_account');
+  // Comptes locaux (tableau)
+  const [localAccounts, setLocalAccounts] = useState(() => {
+    // Nouveau format (tableau)
+    const saved = localStorage.getItem('calendar_local_accounts');
     if (saved) {
-      try { return JSON.parse(saved); } catch { return DEFAULT_LOCAL_ACCOUNT; }
+      try { return JSON.parse(saved); } catch {}
     }
-    // Migration depuis l'ancien calendrier par défaut
+    // Migration depuis le format single account
+    const single = localStorage.getItem('calendar_local_account');
+    if (single && single !== 'null') {
+      try {
+        const acc = JSON.parse(single);
+        return [{ id: 'local-default', name: acc.name || 'Personnel', color: acc.color || '#4285f4' }];
+      } catch {}
+    }
+    // Migration depuis l'ancien calendar_list (défaut sans URL)
     const oldList = localStorage.getItem('calendar_list');
     if (oldList) {
       try {
         const parsed = JSON.parse(oldList);
         const def = parsed.find(c => !c.url || !c.url.trim());
-        if (def) return { name: def.name || DEFAULT_LOCAL_ACCOUNT.name, color: def.color || DEFAULT_LOCAL_ACCOUNT.color };
+        if (def) return [{ id: 'local-default', name: def.name || 'Personnel', color: def.color || '#4285f4' }];
       } catch {}
     }
-    return DEFAULT_LOCAL_ACCOUNT;
+    return [{ id: 'local-default', name: 'Personnel', color: '#4285f4' }];
   });
 
   // Calendriers ICS (avec URL)
@@ -128,13 +131,16 @@ function CalendarModule() {
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventTime, setNewEventTime] = useState('12:00');
   const [newEventEndTime, setNewEventEndTime] = useState('13:00');
+  const [selectedAccountId, setSelectedAccountId] = useState(() => 'local-default');
 
   // Settings state
-  const [tempLocalAccount, setTempLocalAccount] = useState(localAccount);
+  const [tempLocalAccounts, setTempLocalAccounts] = useState(localAccounts);
   const [tempCalendars, setTempCalendars] = useState(calendars);
   const [newCalName, setNewCalName] = useState('');
   const [newCalUrl, setNewCalUrl] = useState('');
   const [newCalColor, setNewCalColor] = useState('#ea4335');
+  const [newLocalName, setNewLocalName] = useState('');
+  const [newLocalColor, setNewLocalColor] = useState('#ea4335');
 
   // Sauvegarder
   useEffect(() => {
@@ -142,8 +148,8 @@ function CalendarModule() {
   }, [localEvents]);
 
   useEffect(() => {
-    localStorage.setItem('calendar_local_account', JSON.stringify(localAccount));
-  }, [localAccount]);
+    localStorage.setItem('calendar_local_accounts', JSON.stringify(localAccounts));
+  }, [localAccounts]);
 
   useEffect(() => {
     localStorage.setItem('calendar_list', JSON.stringify(calendars));
@@ -255,7 +261,8 @@ function CalendarModule() {
   };
 
   const addEvent = () => {
-    if (!newEventTitle.trim()) return;
+    if (!newEventTitle.trim() || localAccounts.length === 0) return;
+    const accountId = localAccounts.length === 1 ? localAccounts[0].id : selectedAccountId;
     const key = dateToKey(selectedDate);
     setLocalEvents(prev => ({
       ...prev,
@@ -263,6 +270,7 @@ function CalendarModule() {
         id: Date.now(),
         title: newEventTitle,
         time: newEventTime,
+        accountId,
       }]
     }));
     setNewEventTitle('');
@@ -282,12 +290,17 @@ function CalendarModule() {
   // Combiner événements locaux et ICS
   const getEventsForDate = (date) => {
     const key = dateToKey(date);
-    const local = (localEvents[key] || []).map(e => ({
-      ...e,
-      calendarColor: localAccount.color,
-      calendarName: localAccount.name,
-      isLocal: true,
-    }));
+    const local = (localEvents[key] || []).map(e => {
+      // Trouver le compte associé (ou fallback sur le premier)
+      const account = localAccounts.find(a => a.id === e.accountId) || localAccounts[0];
+      if (!account) return null;
+      return {
+        ...e,
+        calendarColor: account.color,
+        calendarName: account.name,
+        isLocal: true,
+      };
+    }).filter(Boolean);
 
     const calEvts = [];
     Object.values(calendarEvents).forEach(calData => {
@@ -304,13 +317,40 @@ function CalendarModule() {
   // Settings: couleurs utilisées (exclure un ID pour permettre sa propre couleur)
   const getUsedColors = (excludeId = null) => {
     const used = new Set();
-    if (excludeId !== 'local') used.add(tempLocalAccount.color);
+    tempLocalAccounts.forEach(acc => {
+      if (acc.id !== excludeId) used.add(acc.color);
+    });
     tempCalendars.forEach(cal => {
       if (cal.id !== excludeId) used.add(cal.color);
     });
     return used;
   };
 
+  // Comptes locaux dans settings
+  const changeTempLocalName = (accId, name) => {
+    setTempLocalAccounts(prev => prev.map(a => a.id === accId ? { ...a, name } : a));
+  };
+
+  const changeTempLocalColor = (accId, color) => {
+    if (getUsedColors(accId).has(color)) return;
+    setTempLocalAccounts(prev => prev.map(a => a.id === accId ? { ...a, color } : a));
+  };
+
+  const addTempLocalAccount = () => {
+    if (!newLocalName.trim()) return;
+    const used = getUsedColors();
+    if (used.has(newLocalColor)) return;
+    setTempLocalAccounts(prev => [...prev, {
+      id: `local-${Date.now()}`,
+      name: newLocalName.trim(),
+      color: newLocalColor,
+    }]);
+    setNewLocalName('');
+    const allUsed = new Set([...used, newLocalColor]);
+    setNewLocalColor(CALENDAR_COLORS.find(c => !allUsed.has(c)) || CALENDAR_COLORS[0]);
+  };
+
+  // Calendriers ICS dans settings
   const addCalendar = () => {
     if (!newCalName.trim() || !newCalUrl.trim()) return;
     setTempCalendars(prev => [...prev, {
@@ -343,25 +383,22 @@ function CalendarModule() {
     );
   };
 
-  const changeLocalColor = (color) => {
-    if (getUsedColors('local').has(color)) return;
-    setTempLocalAccount(prev => ({ ...prev, color }));
-  };
-
   const saveSettings = () => {
-    setLocalAccount(tempLocalAccount);
+    setLocalAccounts(tempLocalAccounts);
     setCalendars(tempCalendars);
     setShowSettings(false);
     setTimeout(fetchAllCalendars, 100);
   };
 
   const openSettings = () => {
-    setTempLocalAccount(localAccount);
+    setTempLocalAccounts(localAccounts);
     setTempCalendars(calendars);
-    const used = new Set([localAccount.color, ...calendars.map(c => c.color)]);
+    const used = new Set([...localAccounts.map(a => a.color), ...calendars.map(c => c.color)]);
     setNewCalColor(CALENDAR_COLORS.find(c => !used.has(c)) || CALENDAR_COLORS[0]);
+    setNewLocalColor(CALENDAR_COLORS.find(c => !used.has(c)) || CALENDAR_COLORS[0]);
     setNewCalName('');
     setNewCalUrl('');
+    setNewLocalName('');
     setShowSettings(true);
   };
 
@@ -378,30 +415,75 @@ function CalendarModule() {
             </button>
           </div>
           <div className="settings-form">
-            {/* Compte local */}
+            {/* Comptes locaux */}
             <div className="form-group">
-              <label>{t('calendar.localAccount')}</label>
-              <div className="local-account-section">
+              <label>{t('calendar.localAccounts')} ({tempLocalAccounts.length})</label>
+              <div className="calendars-list">
+                {tempLocalAccounts.map(acc => {
+                  const usedExcludingSelf = getUsedColors(acc.id);
+                  return (
+                    <div key={acc.id} className="calendar-item">
+                      <span className="cal-color-indicator" style={{ background: acc.color }} />
+                      <div className="cal-info">
+                        <input
+                          type="text"
+                          value={acc.name}
+                          onChange={(e) => changeTempLocalName(acc.id, e.target.value)}
+                          className="cal-name-input"
+                        />
+                      </div>
+                      <div className="cal-actions">
+                        <div className="color-picker-mini">
+                          {CALENDAR_COLORS.slice(0, 6).map(color => {
+                            const isUsed = usedExcludingSelf.has(color);
+                            return (
+                              <button
+                                key={color}
+                                className={`color-dot ${acc.color === color ? 'active' : ''}`}
+                                style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
+                                onClick={() => changeTempLocalColor(acc.id, color)}
+                                disabled={isUsed}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Ajouter un compte local */}
+              <div className="add-local-form">
                 <input
                   type="text"
-                  value={tempLocalAccount.name}
-                  onChange={(e) => setTempLocalAccount(prev => ({ ...prev, name: e.target.value }))}
-                  className="add-cal-input"
+                  value={newLocalName}
+                  onChange={(e) => setNewLocalName(e.target.value)}
                   placeholder={t('calendar.accountName')}
+                  className="add-cal-input"
+                  onKeyDown={(e) => e.key === 'Enter' && addTempLocalAccount()}
                 />
-                <div className="color-picker-mini">
-                  {CALENDAR_COLORS.map(color => {
-                    const isUsed = getUsedColors('local').has(color);
-                    return (
-                      <button
-                        key={color}
-                        className={`color-dot ${tempLocalAccount.color === color ? 'active' : ''}`}
-                        style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
-                        onClick={() => changeLocalColor(color)}
-                        disabled={isUsed}
-                      />
-                    );
-                  })}
+                <div className="add-cal-bottom">
+                  <div className="color-picker-mini">
+                    {CALENDAR_COLORS.map(color => {
+                      const isUsed = getUsedColors().has(color);
+                      return (
+                        <button
+                          key={color}
+                          className={`color-dot ${newLocalColor === color ? 'active' : ''}`}
+                          style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
+                          onClick={() => !isUsed && setNewLocalColor(color)}
+                          disabled={isUsed}
+                        />
+                      );
+                    })}
+                  </div>
+                  <button
+                    className="add-cal-btn"
+                    onClick={addTempLocalAccount}
+                    disabled={!newLocalName.trim()}
+                  >
+                    <Plus size={14} /> {t('common.add')}
+                  </button>
                 </div>
               </div>
             </div>
@@ -575,7 +657,7 @@ function CalendarModule() {
                       <span
                         key={i}
                         className="event-dot"
-                        style={{ background: isToday ? 'rgba(255,255,255,0.85)' : (evt.calendarColor || localAccount.color) }}
+                        style={{ background: isToday ? 'rgba(255,255,255,0.85)' : (evt.calendarColor || 'var(--accent-primary)') }}
                       />
                     ))}
                     {dayEvents.length > 5 && (
@@ -602,9 +684,11 @@ function CalendarModule() {
               })}
             </span>
           </div>
-          <button className="add-event-btn" onClick={() => setShowEventModal(true)}>
-            <Plus size={18} />
-          </button>
+          {localAccounts.length > 0 && (
+            <button className="add-event-btn" onClick={() => setShowEventModal(true)}>
+              <Plus size={18} />
+            </button>
+          )}
         </div>
 
         <div className="events-list">
@@ -619,7 +703,7 @@ function CalendarModule() {
                 <div key={`${event.id}-${idx}`} className="event-item">
                   <div
                     className="event-indicator"
-                    style={{ background: event.calendarColor || localAccount.color }}
+                    style={{ background: event.calendarColor || 'var(--accent-primary)' }}
                   />
                   <div className="event-content">
                     <div className="event-time">
@@ -648,9 +732,11 @@ function CalendarModule() {
 
         {/* Légende dynamique */}
         <div className="events-legend">
-          <span className="legend-item">
-            <span className="legend-dot" style={{ background: localAccount.color }} /> {localAccount.name}
-          </span>
+          {localAccounts.map(acc => (
+            <span key={acc.id} className="legend-item">
+              <span className="legend-dot" style={{ background: acc.color }} /> {acc.name}
+            </span>
+          ))}
           {calendars.filter(c => c.enabled).map(cal => (
             <span key={cal.id} className="legend-item">
               <span className="legend-dot" style={{ background: cal.color }} /> {cal.name}
@@ -670,6 +756,24 @@ function CalendarModule() {
               </button>
             </div>
             <div className="modal-content">
+              {/* Sélecteur de compte (si plusieurs) */}
+              {localAccounts.length > 1 && (
+                <div className="form-group">
+                  <label>{t('calendar.account')}</label>
+                  <div className="account-selector">
+                    {localAccounts.map(acc => (
+                      <button
+                        key={acc.id}
+                        className={`account-chip ${selectedAccountId === acc.id ? 'active' : ''}`}
+                        onClick={() => setSelectedAccountId(acc.id)}
+                      >
+                        <span className="account-chip-dot" style={{ background: acc.color }} />
+                        {acc.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="form-group">
                 <label>{t('calendar.title')}</label>
                 <input

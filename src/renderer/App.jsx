@@ -14,6 +14,7 @@ import CustomWebview from './modules/CustomWebview';
 import OBSModule from './modules/OBS';
 import VoiceCommandsModule from './modules/VoiceCommands';
 import DockerModule from './modules/Docker';
+import PhotoFrameModule from './modules/PhotoFrame';
 import useTheme from './hooks/useTheme';
 import { useLicense } from './contexts/LicenseContext';
 
@@ -30,6 +31,7 @@ const BACKUP_KEYS = [
   'voice_input_device',
   'outils_pomodoro', 'outils_notes', 'outils_screenshots_folder', 'outils_screenshots_screen',
   'docker_ui_state',
+  'photoframe_config', 'photoframe_folders',
 ];
 
 // Modules standard (re-rendus à chaque changement)
@@ -43,6 +45,7 @@ const modules = {
   clipboard: { component: ClipboardModule, name: 'Presse-papiers' },
   voicecommands: { component: VoiceCommandsModule, name: 'Commandes Vocales' },
   docker: { component: DockerModule, name: 'Docker' },
+  photoframe: { component: PhotoFrameModule, name: 'Cadre Photo' },
   settings: { component: SettingsModule, name: 'Paramètres' },
 };
 
