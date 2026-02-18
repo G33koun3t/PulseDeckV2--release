@@ -303,14 +303,6 @@
   flex-shrink: 0;
 }
 
-.event-item.google .event-indicator {
-  background: #4285f4;
-}
-
-.event-item.local .event-indicator {
-  background: var(--accent-secondary);
-}
-
 .event-content {
   flex: 1;
   min-width: 0;
@@ -537,14 +529,6 @@
   border-radius: 50%;
 }
 
-.legend-dot.google {
-  background: #4285f4;
-}
-
-.legend-dot.local {
-  background: var(--accent-secondary);
-}
-
 /* Settings Panel */
 .calendar-settings {
   background: var(--bg-secondary);
@@ -765,6 +749,25 @@
 .color-dot.active {
   border-color: white;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.color-dot:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.color-dot:disabled:hover {
+  transform: none;
+}
+
+/* Local Account Section */
+.local-account-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
 }
 
 /* Add Calendar Section */

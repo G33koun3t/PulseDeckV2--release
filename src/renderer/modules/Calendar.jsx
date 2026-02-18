@@ -13,16 +13,11 @@ const CALENDAR_COLORS = [
   '#f06292', '#a1887f', '#8e24aa', '#039be5',
 ];
 
-// Calendrier par défaut
-const DEFAULT_CALENDARS = [
-  {
-    id: 'cal-default',
-    name: 'Personnel',
-    url: '',
-    color: '#4285f4',
-    enabled: true,
-  }
-];
+// Compte local par défaut
+const DEFAULT_LOCAL_ACCOUNT = {
+  name: 'Personnel',
+  color: '#4285f4',
+};
 
 // Obtenir les jours du mois
 const getDaysInMonth = (year, month) => {
@@ -74,7 +69,6 @@ const isSameDay = (date1, date2) => {
          date1.getDate() === date2.getDate();
 };
 
-// Extraire l'heure d'une date ISO
 const getTimeFromISO = (isoString) => {
   if (!isoString) return '00:00';
   const date = new Date(isoString);
@@ -82,7 +76,7 @@ const getTimeFromISO = (isoString) => {
 };
 
 function CalendarModule() {
-  const { t, dateLocale, formatDate } = useTranslation();
+  const { t, dateLocale } = useTranslation();
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
@@ -93,21 +87,36 @@ function CalendarModule() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Multi-calendriers
+  // Compte local (nom + couleur)
+  const [localAccount, setLocalAccount] = useState(() => {
+    const saved = localStorage.getItem('calendar_local_account');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return DEFAULT_LOCAL_ACCOUNT; }
+    }
+    // Migration depuis l'ancien calendrier par défaut
+    const oldList = localStorage.getItem('calendar_list');
+    if (oldList) {
+      try {
+        const parsed = JSON.parse(oldList);
+        const def = parsed.find(c => !c.url || !c.url.trim());
+        if (def) return { name: def.name || DEFAULT_LOCAL_ACCOUNT.name, color: def.color || DEFAULT_LOCAL_ACCOUNT.color };
+      } catch {}
+    }
+    return DEFAULT_LOCAL_ACCOUNT;
+  });
+
+  // Calendriers ICS (avec URL)
   const [calendars, setCalendars] = useState(() => {
     const saved = localStorage.getItem('calendar_list');
     if (saved) {
-      try { return JSON.parse(saved); } catch { return DEFAULT_CALENDARS; }
+      try {
+        return JSON.parse(saved).filter(c => c.url && c.url.trim());
+      } catch { return []; }
     }
-    // Migration depuis l'ancien format (single URL)
-    const oldUrl = localStorage.getItem('google_calendar_ics');
-    if (oldUrl) {
-      return [{ id: 'cal-default', name: 'Personnel', url: oldUrl, color: '#4285f4', enabled: true }];
-    }
-    return DEFAULT_CALENDARS;
+    return [];
   });
 
-  // Événements par calendrier { calId: { dateKey: [events] } }
+  // Événements ICS par calendrier
   const [calendarEvents, setCalendarEvents] = useState({});
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [calendarError, setCalendarError] = useState(null);
@@ -121,27 +130,34 @@ function CalendarModule() {
   const [newEventEndTime, setNewEventEndTime] = useState('13:00');
 
   // Settings state
+  const [tempLocalAccount, setTempLocalAccount] = useState(localAccount);
   const [tempCalendars, setTempCalendars] = useState(calendars);
   const [newCalName, setNewCalName] = useState('');
   const [newCalUrl, setNewCalUrl] = useState('');
   const [newCalColor, setNewCalColor] = useState('#ea4335');
 
-  // Sauvegarder les événements locaux
+  // Sauvegarder
   useEffect(() => {
     localStorage.setItem('calendar_events', JSON.stringify(localEvents));
   }, [localEvents]);
 
-  // Sauvegarder la liste des calendriers
+  useEffect(() => {
+    localStorage.setItem('calendar_local_account', JSON.stringify(localAccount));
+  }, [localAccount]);
+
   useEffect(() => {
     localStorage.setItem('calendar_list', JSON.stringify(calendars));
   }, [calendars]);
 
-  // Récupérer tous les calendriers
+  // Récupérer tous les calendriers ICS
   const fetchAllCalendars = useCallback(async () => {
     if (!window.electronAPI?.fetchGoogleCalendar) return;
 
     const enabledCalendars = calendars.filter(c => c.enabled && c.url);
-    if (enabledCalendars.length === 0) return;
+    if (enabledCalendars.length === 0) {
+      setCalendarEvents({});
+      return;
+    }
 
     setIsLoadingCalendars(true);
     setCalendarError(null);
@@ -158,7 +174,7 @@ function CalendarModule() {
 
       let hasError = false;
 
-      results.forEach(({ status, value, reason }) => {
+      results.forEach(({ status, value }) => {
         if (status === 'rejected') {
           hasError = true;
           return;
@@ -186,7 +202,6 @@ function CalendarModule() {
               endTime: event.end ? getTimeFromISO(event.end) : null,
               location: event.location,
               description: event.description,
-              isGoogle: true,
               calendarId: cal.id,
               calendarName: cal.name,
               calendarColor: cal.color,
@@ -241,26 +256,19 @@ function CalendarModule() {
 
   const addEvent = () => {
     if (!newEventTitle.trim()) return;
-    addLocalEvent();
+    const key = dateToKey(selectedDate);
+    setLocalEvents(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), {
+        id: Date.now(),
+        title: newEventTitle,
+        time: newEventTime,
+      }]
+    }));
     setNewEventTitle('');
     setNewEventTime('12:00');
     setNewEventEndTime('13:00');
     setShowEventModal(false);
-  };
-
-  const addLocalEvent = () => {
-    const key = dateToKey(selectedDate);
-    const newEvent = {
-      id: Date.now(),
-      title: newEventTitle,
-      time: newEventTime,
-      isGoogle: false
-    };
-
-    setLocalEvents(prev => ({
-      ...prev,
-      [key]: [...(prev[key] || []), newEvent]
-    }));
   };
 
   const deleteEvent = (eventId) => {
@@ -271,10 +279,15 @@ function CalendarModule() {
     }));
   };
 
-  // Combiner événements locaux et tous les calendriers
+  // Combiner événements locaux et ICS
   const getEventsForDate = (date) => {
     const key = dateToKey(date);
-    const local = (localEvents[key] || []).map(e => ({ ...e, calendarColor: 'var(--accent-secondary)' }));
+    const local = (localEvents[key] || []).map(e => ({
+      ...e,
+      calendarColor: localAccount.color,
+      calendarName: localAccount.name,
+      isLocal: true,
+    }));
 
     const calEvts = [];
     Object.values(calendarEvents).forEach(calData => {
@@ -288,20 +301,29 @@ function CalendarModule() {
 
   const selectedDateEvents = getEventsForDate(selectedDate);
 
-  // Settings: ajouter un calendrier
+  // Settings: couleurs utilisées (exclure un ID pour permettre sa propre couleur)
+  const getUsedColors = (excludeId = null) => {
+    const used = new Set();
+    if (excludeId !== 'local') used.add(tempLocalAccount.color);
+    tempCalendars.forEach(cal => {
+      if (cal.id !== excludeId) used.add(cal.color);
+    });
+    return used;
+  };
+
   const addCalendar = () => {
     if (!newCalName.trim() || !newCalUrl.trim()) return;
-    const newCal = {
+    setTempCalendars(prev => [...prev, {
       id: `cal-${Date.now()}`,
       name: newCalName.trim(),
       url: newCalUrl.trim(),
       color: newCalColor,
       enabled: true,
-    };
-    setTempCalendars(prev => [...prev, newCal]);
+    }]);
     setNewCalName('');
     setNewCalUrl('');
-    setNewCalColor(CALENDAR_COLORS[Math.floor(Math.random() * CALENDAR_COLORS.length)]);
+    const allUsed = new Set([...getUsedColors(), newCalColor]);
+    setNewCalColor(CALENDAR_COLORS.find(c => !allUsed.has(c)) || CALENDAR_COLORS[0]);
   };
 
   const removeCalendar = (calId) => {
@@ -315,15 +337,32 @@ function CalendarModule() {
   };
 
   const changeCalendarColor = (calId, color) => {
+    if (getUsedColors(calId).has(color)) return;
     setTempCalendars(prev =>
       prev.map(c => c.id === calId ? { ...c, color } : c)
     );
   };
 
+  const changeLocalColor = (color) => {
+    if (getUsedColors('local').has(color)) return;
+    setTempLocalAccount(prev => ({ ...prev, color }));
+  };
+
   const saveSettings = () => {
+    setLocalAccount(tempLocalAccount);
     setCalendars(tempCalendars);
     setShowSettings(false);
     setTimeout(fetchAllCalendars, 100);
+  };
+
+  const openSettings = () => {
+    setTempLocalAccount(localAccount);
+    setTempCalendars(calendars);
+    const used = new Set([localAccount.color, ...calendars.map(c => c.color)]);
+    setNewCalColor(CALENDAR_COLORS.find(c => !used.has(c)) || CALENDAR_COLORS[0]);
+    setNewCalName('');
+    setNewCalUrl('');
+    setShowSettings(true);
   };
 
   // Rendu Settings
@@ -339,42 +378,79 @@ function CalendarModule() {
             </button>
           </div>
           <div className="settings-form">
-            {/* Liste des calendriers */}
+            {/* Compte local */}
             <div className="form-group">
-              <label>{t('calendar.icsCalendars')} ({tempCalendars.length})</label>
-              <div className="calendars-list">
-                {tempCalendars.map(cal => (
-                  <div key={cal.id} className="calendar-item">
-                    <button
-                      className={`cal-toggle ${cal.enabled ? 'enabled' : ''}`}
-                      onClick={() => toggleCalendar(cal.id)}
-                      style={{ borderColor: cal.color, background: cal.enabled ? cal.color : 'transparent' }}
-                    />
-                    <div className="cal-info">
-                      <span className="cal-name">{cal.name}</span>
-                      <span className="cal-url">{cal.url.substring(0, 50)}...</span>
-                    </div>
-                    <div className="cal-actions">
-                      <div className="color-picker-mini">
-                        {CALENDAR_COLORS.slice(0, 6).map(color => (
-                          <button
-                            key={color}
-                            className={`color-dot ${cal.color === color ? 'active' : ''}`}
-                            style={{ background: color }}
-                            onClick={() => changeCalendarColor(cal.id, color)}
-                          />
-                        ))}
-                      </div>
-                      <button className="cal-remove" onClick={() => removeCalendar(cal.id)}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <label>{t('calendar.localAccount')}</label>
+              <div className="local-account-section">
+                <input
+                  type="text"
+                  value={tempLocalAccount.name}
+                  onChange={(e) => setTempLocalAccount(prev => ({ ...prev, name: e.target.value }))}
+                  className="add-cal-input"
+                  placeholder={t('calendar.accountName')}
+                />
+                <div className="color-picker-mini">
+                  {CALENDAR_COLORS.map(color => {
+                    const isUsed = getUsedColors('local').has(color);
+                    return (
+                      <button
+                        key={color}
+                        className={`color-dot ${tempLocalAccount.color === color ? 'active' : ''}`}
+                        style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
+                        onClick={() => changeLocalColor(color)}
+                        disabled={isUsed}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Ajouter un calendrier */}
+            {/* Calendriers ICS */}
+            {tempCalendars.length > 0 && (
+              <div className="form-group">
+                <label>{t('calendar.icsCalendars')} ({tempCalendars.length})</label>
+                <div className="calendars-list">
+                  {tempCalendars.map(cal => {
+                    const usedExcludingSelf = getUsedColors(cal.id);
+                    return (
+                      <div key={cal.id} className="calendar-item">
+                        <button
+                          className={`cal-toggle ${cal.enabled ? 'enabled' : ''}`}
+                          onClick={() => toggleCalendar(cal.id)}
+                          style={{ borderColor: cal.color, background: cal.enabled ? cal.color : 'transparent' }}
+                        />
+                        <div className="cal-info">
+                          <span className="cal-name">{cal.name}</span>
+                          <span className="cal-url">{cal.url.length > 50 ? cal.url.substring(0, 50) + '...' : cal.url}</span>
+                        </div>
+                        <div className="cal-actions">
+                          <div className="color-picker-mini">
+                            {CALENDAR_COLORS.slice(0, 6).map(color => {
+                              const isUsed = usedExcludingSelf.has(color);
+                              return (
+                                <button
+                                  key={color}
+                                  className={`color-dot ${cal.color === color ? 'active' : ''}`}
+                                  style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
+                                  onClick={() => changeCalendarColor(cal.id, color)}
+                                  disabled={isUsed}
+                                />
+                              );
+                            })}
+                          </div>
+                          <button className="cal-remove" onClick={() => removeCalendar(cal.id)}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Ajouter un calendrier ICS */}
             <div className="form-group add-calendar-section">
               <label>{t('calendar.addCalendar')}</label>
               <div className="add-cal-form">
@@ -393,14 +469,18 @@ function CalendarModule() {
                 />
                 <div className="add-cal-bottom">
                   <div className="color-picker-mini">
-                    {CALENDAR_COLORS.map(color => (
-                      <button
-                        key={color}
-                        className={`color-dot ${newCalColor === color ? 'active' : ''}`}
-                        style={{ background: color }}
-                        onClick={() => setNewCalColor(color)}
-                      />
-                    ))}
+                    {CALENDAR_COLORS.map(color => {
+                      const isUsed = getUsedColors().has(color);
+                      return (
+                        <button
+                          key={color}
+                          className={`color-dot ${newCalColor === color ? 'active' : ''}`}
+                          style={{ background: color, opacity: isUsed ? 0.3 : 1 }}
+                          onClick={() => !isUsed && setNewCalColor(color)}
+                          disabled={isUsed}
+                        />
+                      );
+                    })}
                   </div>
                   <button
                     className="add-cal-btn"
@@ -459,10 +539,7 @@ function CalendarModule() {
             >
               <RefreshCw size={16} className={isLoadingCalendars ? 'spinning' : ''} />
             </button>
-            <button className="settings-btn" onClick={() => {
-              setTempCalendars(calendars);
-              setShowSettings(true);
-            }} title={t('common.settings')}>
+            <button className="settings-btn" onClick={openSettings} title={t('common.settings')}>
               <Settings size={16} />
             </button>
             <button className="today-btn" onClick={goToToday}>
@@ -498,7 +575,7 @@ function CalendarModule() {
                       <span
                         key={i}
                         className="event-dot"
-                        style={{ background: isToday ? 'rgba(255,255,255,0.85)' : (evt.calendarColor || 'var(--accent-secondary)') }}
+                        style={{ background: isToday ? 'rgba(255,255,255,0.85)' : (evt.calendarColor || localAccount.color) }}
                       />
                     ))}
                     {dayEvents.length > 5 && (
@@ -542,7 +619,7 @@ function CalendarModule() {
                 <div key={`${event.id}-${idx}`} className="event-item">
                   <div
                     className="event-indicator"
-                    style={{ background: event.calendarColor || 'var(--accent-secondary)' }}
+                    style={{ background: event.calendarColor || localAccount.color }}
                   />
                   <div className="event-content">
                     <div className="event-time">
@@ -559,7 +636,7 @@ function CalendarModule() {
                       <div className="event-location">{event.location}</div>
                     )}
                   </div>
-                  {!event.isGoogle && (
+                  {event.isLocal && (
                     <button className="delete-event-btn" onClick={() => deleteEvent(event.id)}>
                       <Trash2 size={14} />
                     </button>
@@ -571,14 +648,14 @@ function CalendarModule() {
 
         {/* Légende dynamique */}
         <div className="events-legend">
+          <span className="legend-item">
+            <span className="legend-dot" style={{ background: localAccount.color }} /> {localAccount.name}
+          </span>
           {calendars.filter(c => c.enabled).map(cal => (
             <span key={cal.id} className="legend-item">
               <span className="legend-dot" style={{ background: cal.color }} /> {cal.name}
             </span>
           ))}
-          <span className="legend-item">
-            <span className="legend-dot" style={{ background: 'var(--accent-secondary)' }} /> {t('calendar.local')}
-          </span>
         </div>
       </div>
 
@@ -648,7 +725,7 @@ function CalendarModule() {
                 onClick={addEvent}
                 disabled={!newEventTitle.trim()}
               >
-                {t('calendar.addLocal')}
+                {t('common.add')}
               </button>
             </div>
           </div>
