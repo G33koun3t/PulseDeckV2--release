@@ -1,6 +1,6 @@
 {
   "name": "pulsedeck",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "src/main/main.js",
   "description": "PulseDeck - Dashboard pour Corsair Xeneon Edge",
   "author": "",

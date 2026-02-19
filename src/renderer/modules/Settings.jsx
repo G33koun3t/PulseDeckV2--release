@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Settings, RotateCcw, ChevronUp, ChevronDown, Check,
-  Monitor, Sun, Calendar, Home, Volume2, Wrench,
+  Monitor, Sun, Calendar, Home, Volume2, Wrench, Image,
   Newspaper, ClipboardList, Video, BookOpen, Mic,
   Eye, EyeOff, Plus, Trash2, Pencil, X, Save, Globe, Shield, ShoppingCart,
   MonitorSmartphone, Download, RefreshCw, CheckCircle, AlertCircle, Loader
@@ -42,13 +42,14 @@ const MODULE_ICONS = {
   obs: Video,
   voicecommands: Mic,
   docker: DockerIcon,
+  photoframe: Image,
   settings: Settings,
 };
 
 const DEFAULT_ORDER = [
   'monitoring', 'weather', 'calendar', 'homeassistant',
   'volume', 'timer', 'news', 'clipboard', 'obs',
-  'voicecommands', 'docker', 'settings'
+  'voicecommands', 'docker', 'photoframe', 'settings'
 ];
 
 const MAX_WEBVIEWS = 5;
