@@ -17,7 +17,7 @@ const DEFAULT_FEEDS_BY_LANG = {
     { id: 'pcgamer', name: 'PC Gamer', url: 'https://www.pcgamer.com/rss/', category: 'gaming', enabled: true },
     { id: 'theverge', name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', category: 'tech', enabled: true },
     { id: 'arstechnica', name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index', category: 'tech', enabled: true },
-    { id: 'slickdeals', name: 'Slickdeals', url: 'https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&rss=1', category: 'deals', enabled: true },
+    { id: '9to5toys', name: '9to5Toys', url: 'https://9to5toys.com/feed/', category: 'deals', enabled: true },
   ],
   de: [
     { id: 'gamestar', name: 'GameStar', url: 'https://www.gamestar.de/news/rss/news.rss', category: 'gaming', enabled: true },
@@ -52,7 +52,7 @@ const DEFAULT_FEEDS_BY_LANG = {
     { id: 'everyeye', name: 'Everyeye.it', url: 'https://www.everyeye.it/feed', category: 'gaming', enabled: true },
     { id: 'tomshwit', name: "Tom's Hardware IT", url: 'https://www.tomshw.it/feed', category: 'tech', enabled: true },
     { id: 'hdblog', name: 'HDblog', url: 'https://www.hdblog.it/feed/', category: 'tech', enabled: true },
-    { id: 'scontify', name: 'Scontify', url: 'https://www.scontify.net/feed/', category: 'deals', enabled: true },
+    { id: 'smartworld', name: 'SmartWorld', url: 'https://www.smartworld.it/feed', category: 'deals', enabled: true },
   ],
   pl: [
     { id: 'gryonline', name: 'GRY-Online', url: 'https://www.gry-online.pl/rss/news.xml', category: 'gaming', enabled: true },
@@ -157,7 +157,7 @@ function stripHtml(html) {
   return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#039;/g, "'").replace(/&quot;/g, '"').trim();
 }
 
-function NewsModule() {
+function NewsModule({ isActive }) {
   const { t, lang, dateLocale } = useTranslation();
   const [feeds, setFeeds] = useState(() => {
     const savedLang = localStorage.getItem('news_feeds_lang');
@@ -207,10 +207,24 @@ function NewsModule() {
     if (activeCategory === cat) setActiveCategory('all');
   };
 
+  // Réagir au changement de langue (singleton : useState ne re-exécute pas)
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current === lang) return;
+    prevLangRef.current = lang;
+    // Langue changée → réinitialiser les feeds aux defaults de la nouvelle langue
+    localStorage.removeItem('news_feeds_custom');
+    setIsCustomFeeds(false);
+    setActiveCategory('all');
+    const newFeeds = getDefaultFeeds(lang);
+    setFeeds(newFeeds);
+    setArticles([]);
+  }, [lang]);
+
   useEffect(() => {
     localStorage.setItem('news_feeds', JSON.stringify(feeds));
     localStorage.setItem('news_feeds_lang', lang);
-  }, [feeds]);
+  }, [feeds, lang]);
 
   // Crypto ticker — fetch toutes les 2 min
   const fetchCrypto = useCallback(async () => {
@@ -223,11 +237,11 @@ function NewsModule() {
   }, []);
 
   useEffect(() => {
-    if (!showCrypto) return;
+    if (!isActive || !showCrypto) return;
     fetchCrypto();
     cryptoTimer.current = setInterval(fetchCrypto, 2 * 60 * 1000);
     return () => clearInterval(cryptoTimer.current);
-  }, [showCrypto, fetchCrypto]);
+  }, [isActive, showCrypto, fetchCrypto]);
 
   useEffect(() => {
     localStorage.setItem('news_show_crypto', showCrypto.toString());
@@ -262,13 +276,34 @@ function NewsModule() {
     });
     setArticles(allArticles);
     setLoading(false);
+
+    // Fetch OG images for articles without images (e.g. Japanese feeds)
+    const noImageArticles = allArticles.filter(a => !a.image && a.link);
+    if (noImageArticles.length > 0 && window.electronAPI?.fetchOgImages) {
+      try {
+        const urls = noImageArticles.map(a => a.link);
+        const ogResults = await window.electronAPI.fetchOgImages(urls);
+        if (Array.isArray(ogResults) && ogResults.length > 0) {
+          const ogMap = {};
+          ogResults.forEach(r => { if (r.og) ogMap[r.link] = r.og; });
+          if (Object.keys(ogMap).length > 0) {
+            setArticles(prev => prev.map(a =>
+              !a.image && ogMap[a.link] ? { ...a, image: ogMap[a.link] } : a
+            ));
+          }
+        }
+      } catch (e) {
+        console.warn('[RSS] OG images fetch error:', e.message);
+      }
+    }
   }, [feeds]);
 
   useEffect(() => {
+    if (!isActive) return;
     fetchAllFeeds();
     refreshTimer.current = setInterval(fetchAllFeeds, 5 * 60 * 1000);
     return () => clearInterval(refreshTimer.current);
-  }, [fetchAllFeeds]);
+  }, [isActive, fetchAllFeeds]);
 
   const handleArticleClick = (link) => {
     if (link) window.electronAPI.openExternal(link);

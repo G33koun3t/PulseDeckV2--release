@@ -1,0 +1,17 @@
+pub mod monitoring;
+pub mod volume;
+pub mod media;
+pub mod clipboard_cmd;
+pub mod files;
+pub mod calendar;
+pub mod homeassistant;
+pub mod news;
+pub mod license;
+pub mod settings;
+pub mod launcher;
+pub mod docker;
+pub mod voice;
+pub mod notifications;
+pub mod system_actions;
+pub mod guide;
+pub mod webview;

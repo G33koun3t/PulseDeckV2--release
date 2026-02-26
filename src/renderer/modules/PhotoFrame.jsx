@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
   shuffle: false,
 };
 
-function PhotoFrameModule() {
+function PhotoFrameModule({ isActive }) {
   const { t } = useTranslation();
 
   // Config
@@ -117,6 +117,10 @@ function PhotoFrameModule() {
     const imageIdx = displayOrder[wrapped];
     const filePath = images[imageIdx]?.path;
     if (!filePath) return '';
+    // Tauri: convert local file path to asset URL
+    if (window.electronAPI?.convertFileSrc) {
+      return window.electronAPI.convertFileSrc(filePath);
+    }
     return `local-file:///${filePath.replace(/\\/g, '/')}`;
   }, [images, displayOrder]);
 
@@ -156,10 +160,10 @@ function PhotoFrameModule() {
     }
   }, [displayOrder, getImageSrc, layerSrcs]);
 
-  // Auto-advance
+  // Auto-advance (only when visible)
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (isPlaying && images.length > 1) {
+    if (isActive && isPlaying && images.length > 1) {
       intervalRef.current = setInterval(() => {
         const next = currentIndexRef.current + 1;
         goToImage(next);
@@ -168,7 +172,7 @@ function PhotoFrameModule() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPlaying, config.slideDuration, images.length, goToImage]);
+  }, [isActive, isPlaying, config.slideDuration, images.length, goToImage]);
 
   // Navigation
   const goNext = useCallback(() => {

@@ -39,178 +39,9 @@ const getVolumeIcon = (volume, muted, size = 24) => {
   return <Volume2 size={size} />;
 };
 
-const AudioVisualizer = React.memo(function AudioVisualizer() {
-  const { t } = useTranslation();
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const animationRef = useRef(null);
-  const streamRef = useRef(null);
-  const [isActive, setIsActive] = useState(false);
-  const [vizError, setVizError] = useState(null);
+// Audio visualizer removed — desktopCapturer/getDisplayMedia not available in Tauri WebView2
 
-  const stopCapture = useCallback(() => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    analyserRef.current = null;
-    setIsActive(false);
-  }, []);
-
-  const startCapture = useCallback(async () => {
-    try {
-      setVizError(null);
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        audio: true,
-        video: true,
-      });
-
-      // Stop video track immediately — we only need audio
-      stream.getVideoTracks().forEach(track => track.stop());
-
-      const audioTracks = stream.getAudioTracks();
-      if (audioTracks.length === 0) {
-        setVizError(t('volume.visualizerNoAudio'));
-        stream.getTracks().forEach(track => track.stop());
-        return;
-      }
-
-      streamRef.current = stream;
-
-      const audioContext = new AudioContext();
-      audioContextRef.current = audioContext;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-      source.connect(analyser);
-      // Do NOT connect to destination to avoid audio doubling
-      analyserRef.current = analyser;
-
-      setIsActive(true);
-    } catch (err) {
-      console.error('Audio capture error:', err);
-      setVizError(t('volume.visualizerError'));
-      stopCapture();
-    }
-  }, [t, stopCapture]);
-
-  // Canvas rendering loop
-  useEffect(() => {
-    if (!isActive || !analyserRef.current || !canvasRef.current) return;
-
-    const analyser = analyserRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const draw = () => {
-      animationRef.current = requestAnimationFrame(draw);
-
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        if (canvas.width !== rect.width || canvas.height !== rect.height) {
-          canvas.width = rect.width;
-          canvas.height = rect.height;
-        }
-      }
-
-      analyser.getByteFrequencyData(dataArray);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const barCount = 64;
-      const gap = 2;
-      const barWidth = (canvas.width - gap * (barCount - 1)) / barCount;
-      const step = Math.floor(bufferLength / barCount);
-
-      for (let i = 0; i < barCount; i++) {
-        const value = dataArray[i * step];
-        const percent = value / 255;
-        const barHeight = percent * canvas.height;
-
-        // Color gradient: green → orange → red
-        let r, g, b;
-        if (percent < 0.5) {
-          r = Math.round(percent * 2 * 255);
-          g = 200;
-          b = 50;
-        } else {
-          r = 255;
-          g = Math.round((1 - (percent - 0.5) * 2) * 200);
-          b = 50;
-        }
-
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        const x = i * (barWidth + gap);
-        const y = canvas.height - barHeight;
-        const radius = Math.min(barWidth / 2, 3);
-
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + barWidth - radius, y);
-        ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
-        ctx.lineTo(x + barWidth, canvas.height);
-        ctx.lineTo(x, canvas.height);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.fill();
-      }
-    };
-
-    draw();
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    };
-  }, [isActive]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => stopCapture();
-  }, [stopCapture]);
-
-  return (
-    <div key="visualizer" className="audio-visualizer">
-      <div className="audio-visualizer-header">
-        <span className="audio-visualizer-label">{t('volume.visualizer')}</span>
-        <button
-          className={`audio-visualizer-toggle ${isActive ? 'active' : ''}`}
-          onClick={isActive ? stopCapture : startCapture}
-        >
-          {isActive ? t('volume.stopVisualizer') : t('volume.startVisualizer')}
-        </button>
-      </div>
-      {vizError && <div className="audio-visualizer-error">{vizError}</div>}
-      <div className="audio-visualizer-canvas-container" ref={containerRef}>
-        <canvas ref={canvasRef} className="audio-visualizer-canvas" />
-        {!isActive && !vizError && (
-          <div className="audio-visualizer-placeholder">
-            <AudioWaveform size={20} />
-            <span>{t('volume.visualizerHint')}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-
-function VolumeModule() {
+function VolumeModule({ isActive }) {
   const { t } = useTranslation();
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
@@ -294,13 +125,14 @@ function VolumeModule() {
     }
   }, [loadAudioDevices, loadVolume]);
 
-  // Charger au démarrage
+  // Charger au démarrage + poll quand visible
   useEffect(() => {
+    if (!isActive) return;
     loadVolume();
     loadAudioDevices();
     const interval = setInterval(loadVolume, 5000);
     return () => clearInterval(interval);
-  }, [loadVolume, loadAudioDevices]);
+  }, [isActive, loadVolume, loadAudioDevices]);
 
   // Fermer le dropdown au clic extérieur
   useEffect(() => {
@@ -531,11 +363,7 @@ function VolumeModule() {
               </div>
             )}
 
-            {isVisible('visualizer') && (
-              <div className="deck-visualizer">
-                <AudioVisualizer />
-              </div>
-            )}
+            {/* Audio visualizer removed — not available in Tauri WebView2 */}
           </div>
         </div>
 

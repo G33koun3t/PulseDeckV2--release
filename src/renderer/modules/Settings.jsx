@@ -10,7 +10,7 @@ import { WEBVIEW_ICONS, WEBVIEW_ICON_NAMES, getWebviewIcon } from '../utils/webv
 import useTheme, { THEMES, DEFAULT_SETTINGS } from '../hooks/useTheme';
 import { useTranslation, LOCALE_META } from '../i18n';
 import { useLicense } from '../contexts/LicenseContext';
-import { STORE_URL } from '../config';
+import { STORE_URL, PULSEDECK_V2_URL } from '../config';
 import './Settings.css';
 
 // Icône Docker (baleine avec conteneurs)
@@ -151,14 +151,18 @@ function SettingsModule() {
     if (window.electronAPI?.getAppVersion) {
       window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
     }
+    let unlistenPromise;
     if (window.electronAPI?.onUpdateStatus) {
-      window.electronAPI.onUpdateStatus((data) => {
+      unlistenPromise = window.electronAPI.onUpdateStatus((data) => {
         setUpdateStatus(data.status);
         if (data.version) setUpdateVersion(data.version);
         if (data.percent != null) setUpdateProgress(data.percent);
         if (data.error) setUpdateError(data.error);
       });
     }
+    return () => {
+      unlistenPromise?.then(fn => fn());
+    };
   }, []);
 
   // Sélectionner un thème prédéfini
@@ -759,68 +763,91 @@ function SettingsModule() {
             <span className="update-version-value">{appVersion || '...'}</span>
           </div>
 
-          {/* Statut */}
-          {updateStatus === 'available' && (
-            <div className="update-status-banner available">
-              <Download size={16} />
-              <span>{t('updates.available')} — {t('updates.newVersion', { version: updateVersion })}</span>
-            </div>
-          )}
-
-          {updateStatus === 'downloading' && (
-            <div className="update-status-banner downloading">
-              <Loader size={16} className="spin" />
-              <span>{t('updates.downloading')} {t('updates.progress', { percent: updateProgress })}</span>
-              <div className="update-progress-bar">
-                <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+          {/* Bannière migration Electron → Tauri (visible uniquement dans la version Electron) */}
+          {!window.__TAURI_INTERNALS__ && (
+            <div className="migration-banner">
+              <div className="migration-banner-header">
+                <CheckCircle size={20} />
+                <span>{t('updates.migrationTitle')}</span>
               </div>
-            </div>
-          )}
-
-          {updateStatus === 'ready' && (
-            <div className="update-status-banner ready">
-              <CheckCircle size={16} />
-              <span>{t('updates.ready')} — {t('updates.newVersion', { version: updateVersion })}</span>
-            </div>
-          )}
-
-          {updateStatus === 'up-to-date' && (
-            <div className="update-status-banner up-to-date">
-              <CheckCircle size={16} />
-              <span>{t('updates.upToDate')}</span>
-            </div>
-          )}
-
-          {updateStatus === 'error' && (
-            <div className="update-status-banner error">
-              <AlertCircle size={16} />
-              <span>{t('updates.error')}{updateError ? ` : ${updateError}` : ''}</span>
-            </div>
-          )}
-
-          <div className="update-actions">
-            {updateStatus === 'ready' ? (
+              <p className="migration-banner-desc">{t('updates.migrationDesc')}</p>
+              <p className="migration-banner-note">{t('updates.migrationNote')}</p>
               <button
-                className="update-install-btn"
-                onClick={() => window.electronAPI?.quitAndInstall()}
+                className="migration-download-btn"
+                onClick={() => window.electronAPI?.openExternal(PULSEDECK_V2_URL)}
               >
                 <Download size={16} />
-                <span>{t('updates.install')}</span>
+                <span>{t('updates.migrationDownload')}</span>
               </button>
-            ) : (
-              <button
-                className="update-check-btn"
-                onClick={() => {
-                  setUpdateStatus('checking');
-                  window.electronAPI?.checkForUpdates();
-                }}
-                disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-              >
-                {updateStatus === 'checking' ? <Loader size={16} className="spin" /> : <RefreshCw size={16} />}
-                <span>{updateStatus === 'checking' ? t('updates.checking') : t('updates.checkForUpdates')}</span>
-              </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Statut mises à jour classique (Tauri uniquement) */}
+          {window.__TAURI_INTERNALS__ && (
+            <>
+              {updateStatus === 'available' && (
+                <div className="update-status-banner available">
+                  <Download size={16} />
+                  <span>{t('updates.available')} — {t('updates.newVersion', { version: updateVersion })}</span>
+                </div>
+              )}
+
+              {updateStatus === 'downloading' && (
+                <div className="update-status-banner downloading">
+                  <Loader size={16} className="spin" />
+                  <span>{t('updates.downloading')} {t('updates.progress', { percent: updateProgress })}</span>
+                  <div className="update-progress-bar">
+                    <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {updateStatus === 'ready' && (
+                <div className="update-status-banner ready">
+                  <CheckCircle size={16} />
+                  <span>{t('updates.ready')} — {t('updates.newVersion', { version: updateVersion })}</span>
+                </div>
+              )}
+
+              {updateStatus === 'up-to-date' && (
+                <div className="update-status-banner up-to-date">
+                  <CheckCircle size={16} />
+                  <span>{t('updates.upToDate')}</span>
+                </div>
+              )}
+
+              {updateStatus === 'error' && (
+                <div className="update-status-banner error">
+                  <AlertCircle size={16} />
+                  <span>{t('updates.error')}{updateError ? ` : ${updateError}` : ''}</span>
+                </div>
+              )}
+
+              <div className="update-actions">
+                {updateStatus === 'ready' ? (
+                  <button
+                    className="update-install-btn"
+                    onClick={() => window.electronAPI?.quitAndInstall()}
+                  >
+                    <Download size={16} />
+                    <span>{t('updates.install')}</span>
+                  </button>
+                ) : (
+                  <button
+                    className="update-check-btn"
+                    onClick={() => {
+                      setUpdateStatus('checking');
+                      window.electronAPI?.checkForUpdates();
+                    }}
+                    disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                  >
+                    {updateStatus === 'checking' ? <Loader size={16} className="spin" /> : <RefreshCw size={16} />}
+                    <span>{updateStatus === 'checking' ? t('updates.checking') : t('updates.checkForUpdates')}</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Section Licence */}

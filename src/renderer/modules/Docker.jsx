@@ -520,7 +520,7 @@ function HostConfigOverlay({ host, onSave, onDelete, onClose, t }) {
 
 // ========== Main Component ==========
 
-function DockerModule() {
+function DockerModule({ isActive }) {
   const { t } = useTranslation();
 
   // Hosts config
@@ -612,9 +612,9 @@ function DockerModule() {
     } catch {}
   }, []);
 
-  // Container list polling: every 30s
+  // Container list polling: every 30s (only when visible)
   useEffect(() => {
-    if (connectedHosts.size === 0) return;
+    if (!isActive || connectedHosts.size === 0) return;
 
     const fetchAll = () => {
       for (const hostId of connectedRef.current) {
@@ -624,11 +624,11 @@ function DockerModule() {
 
     pollRef.current = setInterval(fetchAll, 30000);
     return () => clearInterval(pollRef.current);
-  }, [connectedHosts.size, fetchContainers]);
+  }, [isActive, connectedHosts.size, fetchContainers]);
 
-  // Stats polling: every 10s
+  // Stats polling: every 10s (only when visible)
   useEffect(() => {
-    if (connectedHosts.size === 0) return;
+    if (!isActive || connectedHosts.size === 0) return;
 
     const fetchAllStats = () => {
       for (const hostId of connectedRef.current) {
@@ -642,11 +642,11 @@ function DockerModule() {
     fetchAllStats();
     statsRef.current = setInterval(fetchAllStats, 10000);
     return () => clearInterval(statsRef.current);
-  }, [connectedHosts.size, fetchStats]);
+  }, [isActive, connectedHosts.size, fetchStats]);
 
-  // Logs auto-refresh: every 5s
+  // Logs auto-refresh: every 5s (only when visible)
   useEffect(() => {
-    if (!logsAutoRefresh || !selectedContainer) {
+    if (!isActive || !logsAutoRefresh || !selectedContainer) {
       clearInterval(logsRef.current);
       return;
     }

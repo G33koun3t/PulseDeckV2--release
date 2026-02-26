@@ -509,6 +509,10 @@ export default {
     install: '再起動してインストール',
     error: 'アップデートの確認に失敗しました',
     newVersion: 'バージョン {{version}}',
+    migrationTitle: 'PulseDeck 2.0が利用可能です！',
+    migrationDesc: 'より高速で軽量な新しいメジャーバージョンが利用可能です。PulseDeck 2.0をダウンロードして、すべての改善をお楽しみください。',
+    migrationDownload: 'PulseDeck 2.0をダウンロード',
+    migrationNote: '設定とライセンスは自動的に移行されます。',
   },
   voicecommands: {
     title: '音声コマンド',

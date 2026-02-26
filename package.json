@@ -1,97 +1,36 @@
 {
   "name": "pulsedeck",
-  "version": "1.2.1",
-  "main": "src/main/main.js",
+  "version": "2.0.0",
   "description": "PulseDeck - Dashboard pour Corsair Xeneon Edge",
   "author": "",
   "license": "ISC",
   "scripts": {
-    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
-    "dev:vite": "vite",
-    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development ELECTRON_RUN_AS_NODE= node scripts/launch-electron.js",
+    "dev": "vite",
     "build": "vite build",
-    "start": "node scripts/launch-electron.js",
-    "dist": "npm run build && node -e \"try{require('fs').rmSync('node_modules/cpu-features',{recursive:true,force:true})}catch{}\" && electron-builder",
-    "publish": "npm run build && node -e \"try{require('fs').rmSync('node_modules/cpu-features',{recursive:true,force:true})}catch{}\" && electron-builder --publish always"
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
+    "@tauri-apps/cli": "^2.10.0",
     "@vitejs/plugin-react": "^5.1.3",
-    "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
-    "electron": "^31.7.7",
-    "electron-builder": "^26.7.0",
-    "vite": "^7.3.1",
-    "wait-on": "^9.0.3"
+    "vite": "^7.3.1"
   },
   "dependencies": {
-    "electron-updater": "^6.7.3",
-    "imap": "^0.8.19",
-    "koffi": "^2.15.1",
-    "loudness": "^0.4.2",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "@tauri-apps/plugin-updater": "^2.10.0",
     "lucide-react": "^0.563.0",
-    "mailparser": "^3.9.3",
-    "node-machine-id": "^1.1.12",
     "obs-websocket-js": "^5.0.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "recharts": "^3.7.0",
-    "rss-parser": "^3.13.0",
-    "speedtest-net": "^2.2.0",
-    "ssh2": "^1.16.0",
-    "systeminformation": "^5.30.7",
-    "vosk": "^0.3.39"
-  },
-  "build": {
-    "appId": "com.pulsedeck.app",
-    "productName": "PulseDeck",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "src/main/**/*",
-      "dist/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "scripts/",
-        "to": "scripts/",
-        "filter": [
-          "*.ps1"
-        ]
-      },
-      {
-        "from": "monitoring.ico",
-        "to": "monitoring.ico"
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "monitoring.ico",
-      "signAndEditExecutable": false
-    },
-    "afterPack": "./scripts/afterPack.js",
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true
-    },
-    "asarUnpack": [
-      "**/speedtest-net/binaries/**",
-      "**/loudness/**",
-      "**/vosk/**",
-      "**/koffi/**",
-      "**/ssh2/**"
-    ],
-    "asar": true,
-    "npmRebuild": false,
-    "electronDist": "node_modules/electron/dist",
-    "publish": {
-      "provider": "github",
-      "owner": "G33koun3t",
-      "repo": "PulseDeck--release",
-      "releaseType": "release"
-    }
+    "recharts": "^3.7.0"
   }
 }

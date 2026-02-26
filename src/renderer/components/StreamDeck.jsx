@@ -273,6 +273,7 @@ function StreamDeck() {
   const { isFreeMode } = useLicense();
   const [buttons, setButtons] = useState(loadButtons);
   const [editMode, setEditMode] = useState(false);
+  const fileLoadedRef = useRef(false);
   const [editingButton, setEditingButton] = useState(null);
   const [gridSettings, setGridSettings] = useState(getGridSettings);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -284,12 +285,18 @@ function StreamDeck() {
 
   // Charger depuis le fichier disque au montage (source de vérité)
   useEffect(() => {
-    if (!window.electronAPI?.loadLauncherButtons) return;
+    if (!window.electronAPI?.loadLauncherButtons) {
+      fileLoadedRef.current = true;
+      return;
+    }
     window.electronAPI.loadLauncherButtons().then((result) => {
       if (result.success && Array.isArray(result.buttons) && result.buttons.length > 0) {
         setButtons(result.buttons);
       }
-    }).catch(() => {});
+      fileLoadedRef.current = true;
+    }).catch(() => {
+      fileLoadedRef.current = true;
+    });
   }, []);
 
   // Écouter les changements de settings (grille)
@@ -314,8 +321,9 @@ function StreamDeck() {
     };
   }, []);
 
-  // Sauvegarder quand les boutons changent
+  // Sauvegarder quand les boutons changent (pas avant le chargement initial)
   useEffect(() => {
+    if (!fileLoadedRef.current) return;
     saveButtons(buttons);
   }, [buttons]);
 

@@ -29,7 +29,7 @@ const HA_WIDGET_DEFS = {
 
 const DEFAULT_SIZES = { minTileWidth: 150 };
 
-function HomeAssistantModule() {
+function HomeAssistantModule({ isActive }) {
   const { t, dateLocale } = useTranslation();
 
   // Widget config
@@ -110,14 +110,13 @@ function HomeAssistantModule() {
     }
   }, [haUrl, haToken, t]);
 
-  // Auto-refresh 30s
+  // Auto-refresh 30s (only when visible)
   useEffect(() => {
-    if (haUrl && haToken) {
-      fetchEntities();
-      const interval = setInterval(fetchEntities, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchEntities, haUrl, haToken]);
+    if (!isActive || !haUrl || !haToken) return;
+    fetchEntities();
+    const interval = setInterval(fetchEntities, 30000);
+    return () => clearInterval(interval);
+  }, [isActive, fetchEntities, haUrl, haToken]);
 
   // Fetch historique pour les capteurs visibles
   useEffect(() => {

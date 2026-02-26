@@ -69,7 +69,7 @@ const getTimeFromISO = (isoString) => {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-function CalendarModule() {
+function CalendarModule({ isActive }) {
   const { t, dateLocale } = useTranslation();
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -234,12 +234,13 @@ function CalendarModule() {
     }
   }, [calendars]);
 
-  // Charger les calendriers au démarrage et toutes les 5 minutes
+  // Charger les calendriers au démarrage et toutes les 5 minutes (only when visible)
   useEffect(() => {
+    if (!isActive) return;
     fetchAllCalendars();
     const interval = setInterval(fetchAllCalendars, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchAllCalendars]);
+  }, [isActive, fetchAllCalendars]);
 
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
 

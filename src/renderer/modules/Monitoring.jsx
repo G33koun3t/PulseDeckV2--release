@@ -42,7 +42,7 @@ const DEFAULT_ALERT_CONFIG = {
   ramPercent: { threshold: 90, enabled: true, notify: false },
 };
 
-function MonitoringModule() {
+function MonitoringModule({ isActive }) {
   const { t } = useTranslation();
   const { isFreeMode } = useLicense();
   const [staticInfo, setStaticInfo] = useState(null);
@@ -111,17 +111,16 @@ function MonitoringModule() {
     loadStaticData();
   }, []);
 
-  // Pause/Resume worker
+  // Pause/Resume worker based on module visibility
   useEffect(() => {
-    window.electronAPI?.setMonitoringPaused?.(false);
-    return () => { window.electronAPI?.setMonitoringPaused?.(true); };
-  }, []);
+    window.electronAPI?.setMonitoringPaused?.(!isActive);
+  }, [isActive]);
 
   // Écouter les données du worker
   useEffect(() => {
     if (!window.electronAPI?.onMonitoringData) return;
 
-    window.electronAPI.onMonitoringData((msg) => {
+    const unlistenPromise = window.electronAPI.onMonitoringData((msg) => {
       if (msg.type === 'light') {
         const data = msg.data;
         setLightData(data);
@@ -171,6 +170,10 @@ function MonitoringModule() {
         if (!msg.data.active && !msg.data.manual) setGamingManual(false);
       }
     });
+
+    return () => {
+      unlistenPromise?.then(fn => fn());
+    };
   }, []);
 
   // Alertes température
@@ -219,7 +222,7 @@ function MonitoringModule() {
   const toggleGamingManual = useCallback(() => {
     const next = !gamingManual;
     setGamingManual(next);
-    if (next) setGamingMode(true);
+    setGamingMode(next);
     window.electronAPI?.setGamingManual?.(next);
   }, [gamingManual]);
 

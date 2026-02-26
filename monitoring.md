@@ -50,9 +50,11 @@
 - Playlists favorites
 
 ### 6. Calendrier ✅
-- Événements du jour
-- Rappels
-- Synchronisation (Google Calendar ?)
+- Comptes locaux multiples (nom + couleur personnalisables)
+- Événements par compte avec sélecteur de couleur unique
+- Ajout de calendriers ICS externes (Google Calendar secret URL, iCloud, Outlook, etc.)
+- Vue journalière avec légende colorée par compte/calendrier
+- Paramètres : gestion des comptes locaux (inline name edit, color picker), ajout ICS
 
 ### 7. Home Assistant ✅
 - Interface style HA OS avec tuiles par domaine (lumières, switches, capteurs, volets, etc.)
@@ -70,7 +72,6 @@
 - Contrôles transport : précédent, play/pause (icône dynamique), suivant
 - Sélecteur de périphérique audio de sortie (COM Interop Windows)
 - Préréglages de volume rapides (0%, 25%, 50%, 75%, 100%)
-- Visualiseur audio temps réel (64 barres, desktopCapturer + Web Audio API + Canvas @60fps)
 - Bouton mute/unmute
 
 ### 9. Outils (ex-Minuteur) ✅
@@ -163,14 +164,13 @@
 - Version gratuite (modules limités : monitoring, volume, news, settings)
 - URL store : `https://4620487871362.gumroad.com/l/PulseDeck`
 
-### 22. Mises à jour automatiques (electron-updater) ✅
-- `electron-updater` + GitHub Releases sur repo public `G33koun3t/PulseDeck--release`
+### 22. Mises à jour automatiques ✅
+- GitHub Releases sur repo public `G33koun3t/PulseDeck--release`
 - Vérification automatique au démarrage (délai 5s)
 - Téléchargement en arrière-plan + barre de progression
 - Bouton "Redémarrer et installer" quand la MAJ est prête
 - Vérification manuelle depuis Settings
-- Module dédié : `src/main/updater.js`
-- Publication : `set GH_TOKEN=xxx && npm run dist -- --publish always`
+- Publication : `npm run publish` (inclut `--publish always`)
 
 ### 23. Site web (GitHub Pages) ✅
 - Landing page : `website/index.html` (hébergée sur `g33koun3t.github.io/Monitoring-Dashboard/`)
@@ -210,7 +210,21 @@
 - Module premium, icône sidebar personnalisée (baleine Docker SVG)
 - Module : `src/main/docker.js` + `src/renderer/modules/Docker.jsx`
 
-### 27. Persistance localStorage générique ✅
+### 27. Cadre Photo ✅
+- Diaporama d'images depuis un ou plusieurs dossiers locaux
+- Transitions configurables : fondu, glissement, zoom, aucune
+- Durée par photo ajustable (3-60 secondes)
+- Durée de transition ajustable (0.3-3 secondes)
+- Lecture aléatoire (shuffle Fisher-Yates)
+- Crossfade à deux couches (swap activeLayer 0/1)
+- Contrôles overlay : précédent, play/pause, suivant (auto-hide après 3s)
+- État vide avec raccourci vers les paramètres
+- Config persistée dans localStorage (`photoframe_config`, `photoframe_folders`)
+- Réutilise les IPC existants (`selectScreenshotFolder`, `listScreenshots`)
+- Affichage via protocole `local-file:///`
+- Module : `src/renderer/modules/PhotoFrame.jsx` + `.css`
+
+### 28. Persistance localStorage générique ✅
 - Backup automatique de toutes les clés localStorage modules sur disque (`local-storage-backup.json`)
 - Restauration automatique au démarrage si localStorage vide (survit aux mises à jour NSIS)
 - 3 niveaux de backup :
@@ -220,15 +234,18 @@
 - Sauvegarde périodique (30s) + au blur (perte de focus) + initiale (5s)
 - IPC : `save-local-storage-backup` / `load-local-storage-backup`
 
-### 28. Procédure de publication d'une mise à jour
-1. Incrémenter la version dans `package.json` (ex: `"version": "1.1.2"` → `"version": "1.1.3"`)
+### 29. Procédure de publication d'une mise à jour
+1. Incrémenter la version dans `package.json`
 2. Créer un **Personal Access Token GitHub** (une seule fois) :
    - github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Scope : `repo` (accès complet)
    - Copier le token `ghp_...`
 3. Build + publish :
    ```bash
-   set GH_TOKEN=ghp_ton_token && npm run dist -- --publish always
+   # PowerShell :
+   $env:GH_TOKEN = "ghp_ton_token"; npm run publish
+   # ou CMD :
+   set GH_TOKEN=ghp_ton_token && npm run publish
    ```
 4. electron-builder crée automatiquement une GitHub Release sur `G33koun3t/PulseDeck--release` avec :
    - `PulseDeck Setup x.x.x.exe` (installer)
@@ -239,58 +256,41 @@
 
 ## Stack technique (VALIDÉE)
 
-### Electron + React
-- **Electron** : App desktop cross-platform
-- **React** : Interface réactive et composants
-- **Recharts/Chart.js** : Graphiques temps réel
+### Electron + React (migration Tauri v2 prévue)
+- **Electron 31** : App desktop (migration Tauri v2 en cours pour réduire les ressources)
+- **React 19** : Interface réactive et composants
+- **Vite 7** : Build tool
+- **Recharts** : Graphiques temps réel (courbes CPU, réseau)
 - **systeminformation** : Données hardware (CPU, RAM, GPU, disques)
-- **Node.js** : Backend pour APIs
+- **Node.js** : Backend pour APIs et IPC
 
-### APIs externes
-- **OpenWeatherMap** : Météo (gratuit)
-- **WhatsApp Web** : Via webview intégré
-- **SoundCloud/YouTube** : Embeds ou APIs
-- **Home Assistant** : API REST + WebSocket (temps réel)
-- **Windows Audio API** : Contrôle volume (loudness + ffi-napi)
-- **Vosk** : Reconnaissance vocale offline (modèles par langue, via koffi)
-- **ssh2** : Connexion SSH pour Docker distant (npmRebuild: false, prebuilds natifs)
+### APIs et librairies
+- **Open-Meteo** : Météo gratuite (pas de clé API)
+- **Home Assistant** : API REST (états, services, lumières, volets)
+- **Windows Audio API** : Contrôle volume (loudness + WASAPI COM)
+- **Vosk** : Reconnaissance vocale offline (modèles par langue, via koffi FFI)
+- **ssh2** : Connexion SSH pour Docker distant
 - **obs-websocket-js** : Contrôle OBS Studio via WebSocket
+- **rss-parser** : Lecteur RSS multi-flux
+- **CoinGecko API** : Prix crypto en temps réel
+- **Gumroad API** : Système de licence
 
 ## Architecture UI
 
-**Dimensions finales : 1650 x 680 pixels**
-**11 modules au total**
+**Fenêtre : 2560 x 720 pixels** (plein écran Xeneon Edge, taskbar ignorée)
 
-### Menu latéral gauche (VALIDÉ)
-- Menu compact avec icônes : **80px de large**
-- Zone contenu : **1570 x 680 pixels**
-- Icônes tactiles avec feedback visuel
-
+### Layout
 ```
-┌──────┬─────────────────────────────────────────────────────┬──────────┐
-│ MENU │              CONTENU ACTIF (1840px)                 │ STREAM   │
-│(80px)│                                                     │ DECK     │
-│      │                                                     │ (640px)  │
-│ 🖥️  │  ┌─────────────────────────────────────────────────┐ │          │
-│ 💬  │  │                                                 │ │          │
-│ ☀️  │  │                                                 │ │          │
-│ 📅  │  │         Widget / App sélectionné                │ │   NE     │
-│ 🏠  │  │              (pleine zone)                      │ │   PAS    │
-│ 🔊  │  │                                                 │ │  TOUCH   │
-│ ⏱️  │  │                                                 │ │          │
-│ 📺  │  └─────────────────────────────────────────────────┘ │          │
-│ 🎵  │                                                     │          │
-│ 🎧  │                                                     │          │
-│ 🎶  │                                                     │          │
-└──────┴─────────────────────────────────────────────────────┴──────────┘
+[Sidebar 80px] [Main Content ~1570px] [Lanceur ~910px]
 ```
 
-## Navigation
-- **Swipe horizontal** : Changer de module
-- **Tabs tactiles** : Navigation rapide en haut
-- **Widgets redimensionnables** : Personnalisation de la disposition
+- **Sidebar** : icônes lucide-react, ordre personnalisable, modules masquables
+- **Contenu principal** : module actif plein cadre
+- **Lanceur** : grille 7 colonnes, boutons personnalisables, centré verticalement
 
 ---
+
+## Version actuelle : 1.2.1
 
 ## Notes
 
@@ -301,6 +301,8 @@
 - Mise à jour le 13/02/2026 : HA redesign (tuiles HA OS, color picker, RGB), Volume DJ deck, Lanceur type HA, News auto-langue, Settings backup fichier, Guide PDF v3 (9 langues), OBS module, Footer légal, Screenshots GitHub Pages, version 1.1.2
 - Mise à jour le 13/02/2026 : Module Commandes Vocales (Vosk + Web Speech, 9 langues), Module Docker (SSH multi-hôtes), Persistance localStorage générique (backup fichier toutes configs), Fix crash voice.js (isDestroyed), Fix processus exit (isQuitting + force-kill), Sidebar Docker icon (baleine SVG), Settings ordre modules dynamique, npmRebuild: false (prebuilds natifs), version 1.1.3
 - Mise à jour le 14/02/2026 : Fix asar production — vosk-koffi.js (app.asar → app.asar.unpacked pour libvosk.dll), speedtest-net (binary path explicite pour ENOTDIR), suppression cpu-features avant build (script dist), version 1.1.5
+- Mise à jour le 25/02/2026 : Calendrier refactorisé (suppression références Google, comptes locaux multiples avec couleurs uniques), Module Cadre Photo (diaporama, transitions, shuffle), Lanceur centré verticalement, Photoframe dans ordre modules Settings, Suppression visualiseur audio Volume, version 1.2.1
+- Mise à jour le 25/02/2026 : Plan de migration Electron → Tauri v2 approuvé (réduction ressources ~80% RAM, ~10 Mo vs ~150 Mo)
 
 ## Légende
 - ✅ Complété

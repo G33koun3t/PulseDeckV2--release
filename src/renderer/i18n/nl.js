@@ -509,6 +509,10 @@ export default {
     install: 'Herstarten en installeren',
     error: 'Fout bij het controleren op updates',
     newVersion: 'Versie {{version}}',
+    migrationTitle: 'PulseDeck 2.0 is beschikbaar!',
+    migrationDesc: 'Een nieuwe, snellere en lichtere hoofdversie is beschikbaar. Download PulseDeck 2.0 om van alle verbeteringen te genieten.',
+    migrationDownload: 'PulseDeck 2.0 downloaden',
+    migrationNote: 'Uw instellingen en licentie worden automatisch overgedragen.',
   },
   voicecommands: {
     title: 'Spraakopdrachten',

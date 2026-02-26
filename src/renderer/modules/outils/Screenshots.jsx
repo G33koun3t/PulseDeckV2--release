@@ -216,7 +216,7 @@ function Screenshots() {
           </button>
           <img
             className="screenshot-preview-img"
-            src={`local-file:///${preview.replace(/\\/g, '/')}`}
+            src={window.electronAPI?.convertFileSrc ? window.electronAPI.convertFileSrc(preview) : `local-file:///${preview.replace(/\\/g, '/')}`}
             alt="Preview"
             onClick={e => e.stopPropagation()}
           />

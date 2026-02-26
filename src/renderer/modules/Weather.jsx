@@ -38,7 +38,7 @@ const getWeatherIcon = (code, size = 48) => {
   return <Sun size={size} />;
 };
 
-function WeatherModule() {
+function WeatherModule({ isActive }) {
   const { t, dateLocale, formatTime } = useTranslation();
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState([]);
@@ -152,10 +152,11 @@ function WeatherModule() {
   };
 
   useEffect(() => {
+    if (!isActive) return;
     fetchWeather();
     const interval = setInterval(fetchWeather, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [city]);
+  }, [isActive, city]);
 
   const handleSaveSettings = () => {
     localStorage.setItem('weather_city', tempCity);

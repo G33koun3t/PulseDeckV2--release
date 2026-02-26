@@ -13,7 +13,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    host: 'localhost',
   },
+  envPrefix: ['VITE_', 'TAURI_'],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src/renderer'),

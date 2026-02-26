@@ -125,11 +125,6 @@ function App() {
   // En free mode : limiter les webviews à 1
   const activeWebviews = isFreeMode ? customWebviews.slice(0, 1) : customWebviews;
 
-  const isPersistent = activeModule === 'obs' || activeModule === 'timer' || activeWebviews.some(w => w.id === activeModule);
-  // En free mode : bloquer les modules non autorisés
-  const isModuleAllowed = !isFreeMode || FREE_MODE_MODULES.includes(activeModule) || activeWebviews.some(w => w.id === activeModule);
-  const ActiveComponent = !isPersistent && isModuleAllowed ? modules[activeModule]?.component : null;
-
   return (
     <div className="app-container">
       <Sidebar
@@ -140,18 +135,26 @@ function App() {
         customWebviews={activeWebviews}
       />
       <main className="main-content">
-        {/* Modules standard - rendus uniquement quand actifs */}
-        {ActiveComponent && <ActiveComponent />}
+        {/* Tous les modules sont des singletons — montés une seule fois, affichés/cachés via display */}
+        {/* display: contents = wrapper invisible au layout, le module est enfant direct de main-content */}
+        {Object.entries(modules).map(([key, { component: Component }]) => {
+          if (isFreeMode && !FREE_MODE_MODULES.includes(key)) return null;
+          return (
+            <div key={key} style={{ display: activeModule === key ? 'contents' : 'none' }}>
+              <Component isActive={activeModule === key} />
+            </div>
+          );
+        })}
 
         {/* Outils - toujours monté pour conserver les timers en cours */}
-        <div style={{ display: activeModule === 'timer' ? 'flex' : 'none', width: '100%', height: '100%' }}>
-          <OutilsModule />
+        <div style={{ display: activeModule === 'timer' ? 'contents' : 'none' }}>
+          <OutilsModule isActive={activeModule === 'timer'} />
         </div>
 
         {/* OBS - toujours monté, caché si inactif (désactivé en free mode) */}
         {!isFreeMode && (
-          <div style={{ display: activeModule === 'obs' ? 'flex' : 'none', width: '100%', height: '100%' }}>
-            <OBSModule />
+          <div style={{ display: activeModule === 'obs' ? 'contents' : 'none' }}>
+            <OBSModule isActive={activeModule === 'obs'} />
           </div>
         )}
 
@@ -160,12 +163,10 @@ function App() {
           <div
             key={webview.id}
             style={{
-              display: activeModule === webview.id ? 'flex' : 'none',
-              width: '100%',
-              height: '100%',
+              display: activeModule === webview.id ? 'contents' : 'none',
             }}
           >
-            <CustomWebview id={webview.id} url={webview.url} />
+            <CustomWebview id={webview.id} url={webview.url} isActive={activeModule === webview.id} />
           </div>
         ))}
       </main>

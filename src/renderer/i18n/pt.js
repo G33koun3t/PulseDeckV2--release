@@ -509,6 +509,10 @@ export default {
     install: 'Reiniciar e instalar',
     error: 'Erro ao verificar atualizações',
     newVersion: 'Versão {{version}}',
+    migrationTitle: 'PulseDeck 2.0 está disponível!',
+    migrationDesc: 'Uma nova versão principal mais rápida e leve está disponível. Baixe o PulseDeck 2.0 para aproveitar todas as melhorias.',
+    migrationDownload: 'Baixar PulseDeck 2.0',
+    migrationNote: 'Suas configurações e licença serão transferidas automaticamente.',
   },
   voicecommands: {
     title: 'Comandos de Voz',

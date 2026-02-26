@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PulseDeck",
+  "identifier": "com.pulsedeck.app",
+  "version": "2.0.0",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "PulseDeck",
+        "decorations": false,
+        "transparent": false,
+        "resizable": false,
+        "width": 2560,
+        "height": 720,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: asset: https://asset.localhost; media-src 'self' blob: mediastream:; connect-src 'self' https: http: ws://localhost:* ws://127.0.0.1:*; font-src 'self' data:;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/G33koun3t/PulseDeck--release/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
+  }
+}

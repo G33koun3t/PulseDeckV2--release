@@ -16,7 +16,7 @@ function getRelativeTime(timestamp, t) {
   return t('clipboard.daysAgo', { count: Math.floor(diffH / 24) });
 }
 
-function ClipboardModule() {
+function ClipboardModule({ isActive }) {
   const { t } = useTranslation();
   const [history, setHistory] = useState(() => {
     const saved = localStorage.getItem('clipboard_history');
@@ -70,12 +70,11 @@ function ClipboardModule() {
   }, [lastClipboard]);
 
   useEffect(() => {
-    // Vérifier immédiatement
+    if (!isActive) return;
     checkClipboard();
-    // Puis toutes les secondes
     pollInterval.current = setInterval(checkClipboard, 1000);
     return () => clearInterval(pollInterval.current);
-  }, [checkClipboard]);
+  }, [isActive, checkClipboard]);
 
   const copyToClipboard = async (entry) => {
     try {

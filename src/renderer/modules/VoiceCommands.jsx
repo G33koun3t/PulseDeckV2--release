@@ -26,7 +26,7 @@ const LANG_MAP = {
   pt: 'pt-PT', it: 'it-IT', nl: 'nl-NL', pl: 'pl-PL', ja: 'ja-JP',
 };
 
-function VoiceCommandsModule() {
+function VoiceCommandsModule({ isActive }) {
   const { t, lang } = useTranslation();
 
   const [isListening, setIsListening] = useState(false);
@@ -239,13 +239,16 @@ function VoiceCommandsModule() {
         handleFinalResult(data.text);
       }
     };
-    window.electronAPI.onVoiceResult(handler);
+    const unlistenPromise = window.electronAPI.onVoiceResult(handler);
+    return () => {
+      unlistenPromise?.then(fn => fn());
+    };
   }, [lang]);
 
   // Écouter les changements de statut (Vosk via main process)
   useEffect(() => {
     if (!window.electronAPI?.onVoiceStatus) return;
-    window.electronAPI.onVoiceStatus((data) => {
+    const unlistenPromise = window.electronAPI.onVoiceStatus((data) => {
       // Toujours traiter downloading/extracting/model-ready (quel que soit le backend)
       if (data.status === 'downloading-model' || data.status === 'extracting-model' || data.status === 'model-ready') {
         setVoiceStatus(data.status);
@@ -266,6 +269,9 @@ function VoiceCommandsModule() {
         stopAudioCapture();
       }
     });
+    return () => {
+      unlistenPromise?.then(fn => fn());
+    };
   }, []);
 
   // Relancer la reconnaissance si la langue change en cours d'écoute
