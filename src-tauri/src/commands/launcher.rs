@@ -1,18 +1,22 @@
 use serde_json::Value;
 use std::fs;
 use tauri::Manager;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 #[tauri::command]
 pub async fn open_external(url: String) -> Result<Value, String> {
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("steam://") {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &url])
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.args(["/C", "start", "", &url]);
+        #[cfg(windows)]
+        cmd.creation_flags(0x08000000);
+        cmd.spawn().map_err(|e| e.to_string())?;
     } else {
-        std::process::Command::new(&url)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        let mut cmd = std::process::Command::new(&url);
+        #[cfg(windows)]
+        cmd.creation_flags(0x08000000);
+        cmd.spawn().map_err(|e| e.to_string())?;
     }
     Ok(serde_json::json!({ "success": true }))
 }
@@ -113,20 +117,32 @@ pub async fn import_launcher_config(app: tauri::AppHandle) -> Result<Value, Stri
 pub async fn system_action(action_id: String) -> Result<Value, String> {
     match action_id.as_str() {
         "shutdown" => {
-            std::process::Command::new("shutdown").args(["/s", "/t", "0"]).spawn().map_err(|e| e.to_string())?;
+            let mut cmd = std::process::Command::new("shutdown");
+            cmd.args(["/s", "/t", "0"]);
+            #[cfg(windows)]
+            cmd.creation_flags(0x08000000);
+            cmd.spawn().map_err(|e| e.to_string())?;
         }
         "restart" => {
-            std::process::Command::new("shutdown").args(["/r", "/t", "0"]).spawn().map_err(|e| e.to_string())?;
+            let mut cmd = std::process::Command::new("shutdown");
+            cmd.args(["/r", "/t", "0"]);
+            #[cfg(windows)]
+            cmd.creation_flags(0x08000000);
+            cmd.spawn().map_err(|e| e.to_string())?;
         }
         "sleep" => {
-            std::process::Command::new("rundll32.exe")
-                .args(["powrprof.dll,SetSuspendState", "0,1,0"])
-                .spawn().map_err(|e| e.to_string())?;
+            let mut cmd = std::process::Command::new("rundll32.exe");
+            cmd.args(["powrprof.dll,SetSuspendState", "0,1,0"]);
+            #[cfg(windows)]
+            cmd.creation_flags(0x08000000);
+            cmd.spawn().map_err(|e| e.to_string())?;
         }
         "lock" => {
-            std::process::Command::new("rundll32.exe")
-                .args(["user32.dll,LockWorkStation"])
-                .spawn().map_err(|e| e.to_string())?;
+            let mut cmd = std::process::Command::new("rundll32.exe");
+            cmd.args(["user32.dll,LockWorkStation"]);
+            #[cfg(windows)]
+            cmd.creation_flags(0x08000000);
+            cmd.spawn().map_err(|e| e.to_string())?;
         }
         "empty-recycle-bin" => {
             #[cfg(windows)]

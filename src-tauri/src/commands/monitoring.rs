@@ -253,10 +253,11 @@ pub async fn get_network_stats(state: State<'_, MonitoringState>) -> Result<Valu
 #[tauri::command]
 pub async fn run_speedtest() -> Result<Value, String> {
     // Try Ookla CLI first, then fallback to built-in HTTP speed test
-    let ookla = tokio::process::Command::new("speedtest")
-        .args(["--format=json", "--accept-license", "--accept-gdpr"])
-        .output()
-        .await;
+    let mut ookla_cmd = tokio::process::Command::new("speedtest");
+    ookla_cmd.args(["--format=json", "--accept-license", "--accept-gdpr"]);
+    #[cfg(windows)]
+    ookla_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    let ookla = ookla_cmd.output().await;
 
     if let Ok(output) = ookla {
         if output.status.success() {
@@ -540,8 +541,8 @@ pub async fn set_monitoring_paused(
 async fn get_gpu_usage() -> Value {
     let default = serde_json::json!({"load": 0, "memUsed": 0, "memTotal": 0, "model": "GPU", "temperatureGpu": 0, "powerDraw": 0});
 
-    let child = match tokio::process::Command::new("powershell.exe")
-        .args([
+    let mut cmd = tokio::process::Command::new("powershell.exe");
+    cmd.args([
             "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
             r#"
 $defaultJson = '{"load":0,"memUsed":0,"memTotal":0,"model":"GPU","temperatureGpu":0,"powerDraw":0}'
@@ -603,8 +604,10 @@ try {
         ])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
-        .kill_on_drop(true) // Auto-kill process if future is dropped (timeout)
-        .spawn() {
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    let child = match cmd.spawn() {
         Ok(child) => child,
         Err(_) => return default,
     };

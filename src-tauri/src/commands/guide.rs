@@ -1,5 +1,7 @@
 use serde_json::Value;
 use tauri::Manager;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const VALID_LANGS: &[&str] = &["fr", "en", "de", "nl", "es", "pt", "it", "pl", "ja"];
 
@@ -22,10 +24,11 @@ pub async fn open_guide(app: tauri::AppHandle, lang: String) -> Result<Value, St
     }
 
     // Open PDF with system default viewer
-    std::process::Command::new("cmd")
-        .args(["/C", "start", "", &pdf_path.to_string_lossy()])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = std::process::Command::new("cmd");
+    cmd.args(["/C", "start", "", &pdf_path.to_string_lossy()]);
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000);
+    cmd.spawn().map_err(|e| e.to_string())?;
 
     Ok(serde_json::json!({ "success": true }))
 }
