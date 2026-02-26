@@ -86,15 +86,17 @@ pub async fn fetch_google_calendar(ics_url: String) -> Result<Value, String> {
 
 /// Convert ICS date format to ISO 8601
 fn parse_ics_date(date_str: &str) -> String {
-    let clean = date_str.replace('Z', "");
+    let is_utc = date_str.ends_with('Z');
+    let clean = date_str.trim_end_matches('Z');
     if clean.len() >= 15 && clean.contains('T') {
         let (date, time) = clean.split_at(8);
         let time = &time[1..];
-        format!(
+        let iso = format!(
             "{}-{}-{}T{}:{}:{}",
             &date[0..4], &date[4..6], &date[6..8],
             &time[0..2], &time[2..4], &time[4..6]
-        )
+        );
+        if is_utc { format!("{}Z", iso) } else { iso }
     } else if clean.len() >= 8 {
         format!("{}-{}-{}", &clean[0..4], &clean[4..6], &clean[6..8])
     } else {
