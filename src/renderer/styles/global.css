@@ -56,7 +56,6 @@ body {
   flex-direction: column;
   justify-content: space-between;
   padding: 10px 0;
-  -webkit-app-region: drag;
 }
 
 .sidebar-menu {
@@ -91,7 +90,7 @@ body {
   border-radius: 12px;
   transition: all 0.2s ease;
   position: relative;
-  -webkit-app-region: no-drag;
+  touch-action: manipulation;
 }
 
 .sidebar-item svg {
@@ -157,6 +156,7 @@ body {
   cursor: pointer;
   display: flex;
   align-items: center;
+  touch-action: manipulation;
   justify-content: center;
   border-radius: 10px;
   transition: all 0.2s ease;
