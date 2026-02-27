@@ -143,7 +143,7 @@ function SettingsModule() {
       });
     }
     if (window.electronAPI?.getAutoStart) {
-      window.electronAPI.getAutoStart().then(setAutoStart).catch(() => {});
+      window.electronAPI.getAutoStart().then(r => setAutoStart(!!r?.enabled)).catch(() => {});
     }
     if (window.electronAPI?.getDisplays) {
       window.electronAPI.getDisplays().then(setDisplays).catch(() => {});
